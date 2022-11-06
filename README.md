@@ -1,9 +1,24 @@
 # mary-bot
 <img src="https://i.ytimg.com/vi/9S831972rjA/maxresdefault.jpg">
 
+## Introduction
 A Discord bot I created in Go. Her name is Mary. After receiving my offer to work at Uber, I knew I had to learn Go right away, as my interviewer informed me that that was the primary language they used for back end development. I decided to learn some noSQL and MongoDB to implement a database-driven game so that people will actually interact with her (cuz my classmate said that Eve was "so useless"). 
 
 Disclaimer: The images are from an old MMORPG named <a href="https://elsword.koggames.com/">Elsword</a>. I take no credit.
+
+## Getting Started
+To get started, you'll need to <a href="https://discord.com/developers/docs/intro">sign up</a> to become a Discord developer, create a bot (application), then get your token. 
+
+### Deployment
+Once you have your token, if you are deploying locally, create a .env file with the following:
+```
+TOKEN = "yourtokenhere"
+```
+
+Then, you can run:
+```
+go run mary.go
+```
 
 ### Prerequisites
 ```
