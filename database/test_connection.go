@@ -17,7 +17,8 @@ func TestConnection(mongoURI string) (string) {
 		return "Error occurred creating MongoDB client! " + strings.Title(err.Error())
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second) // Timeout for connection is 10 secs
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // Timeout for connection is 10 secs
+	defer cancel() // Fix for memory leak
 	err = client.Connect(ctx)
 	if err != nil {
 		fmt.Printf("Error occurred connecting to database! %s\n", err)
