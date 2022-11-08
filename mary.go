@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"github.com/joho/godotenv"
 	"github.com/bwmarrin/discordgo"
+	database "mary-bot/database"
 )
 
 func main() {
@@ -55,12 +57,37 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 		return
 	}
 
-	fmt.Printf("%s\n", message.Content)
-
 	if message.Content == "test" {
 		_, err := session.ChannelMessageSend(message.ChannelID, "Test successful!")
 		if err != nil {
 			fmt.Printf("Error occurred during testing! %s\n", err)
+		}
+	}
+
+	// Get URI for connecting to MongoDB database
+	MONGO_URI := os.Getenv("MONGO_URI")
+	if MONGO_URI == "" {
+		fmt.Println("MongoDB URI not found!")
+		return
+	}
+
+	command := strings.Split(message.Content, " ")
+	if command[0] == "mary" {
+		switch true {
+		// mary test
+		case command[1] == "test" && len(command) == 2:
+			session.ChannelMessageSend(message.ChannelID, "Test successful!")
+			break
+		// mary test connection -> checks if mongoDB connection is working
+		case command[1] == "test" && command[2] == "connection":
+			dbErr := database.TestConnection(MONGO_URI)
+			if dbErr != "" {
+				session.ChannelMessageSend(message.ChannelID, dbErr)
+				break
+			} else {
+				session.ChannelMessageSend(message.ChannelID, "Database connection successful!")
+			break
+			}
 		}
 	}
 }
