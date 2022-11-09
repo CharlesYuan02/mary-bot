@@ -108,16 +108,18 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 		
 		// mary bal -> checks balance of message author
 		case command[1] == "bal":
-			res := database.CRUD(MONGO_URI, guildID, guildName, userID, userName, "bal", 0)
+			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "bal", 0)
 			session.ChannelMessageSend(message.ChannelID, res)
 
 		// mary daily -> gives user 100 coins
 		case command[1] == "daily":
-			res := database.CRUD(MONGO_URI, guildID, guildName, userID, userName, "daily", 100)
+			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "daily", 100)
 			session.ChannelMessageSend(message.ChannelID, res)
 		
+
+		// Everything else (will most likely return "Command not recognized!")
 		default:
-			res := database.CRUD(MONGO_URI, guildID, guildName, userID, userName, command[1], 0)
+			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, command[1], 0)
 			session.ChannelMessageSend(message.ChannelID, res)
 		}
 	}
