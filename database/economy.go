@@ -32,6 +32,27 @@ func bal(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 
 // mary daily
 func daily(ctx context.Context, userCollection *mongo.Collection, guildID int, userID int, balance int) (string) {
+	// Check if daily has reset
+	collectionResult, err := userCollection.FindOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+	).DecodeBytes()
+	if err != nil {
+		fmt.Printf("Error occurred while selecting from database! %s\n", err)
+		return "Error occurred while selecting from database! " + strings.Title(err.Error())
+	}
+	lastDaily := collectionResult.Lookup("last_daily").DateTime()
+	if time.Now().Unix() - lastDaily/1000 < 86400 {	
+		waitTime := int(86400 - (time.Now().Unix() - lastDaily/1000))
+		hours := waitTime / 3600
+		minutes := (waitTime % 3600) / 60
+		seconds := waitTime % 60
+		return "You have already claimed your daily! Please wait " + strconv.Itoa(hours) + " hours, " + strconv.Itoa(minutes) + " minutes, and " + strconv.Itoa(seconds) + " seconds before claiming again."
+	}
+	
 	result := userCollection.FindOneAndUpdate(
 		ctx,
 		bson.D{
@@ -41,6 +62,9 @@ func daily(ctx context.Context, userCollection *mongo.Collection, guildID int, u
 		bson.D{
 			{Key: "$inc", Value: bson.D{
 				{Key: "balance", Value: balance},
+			}},
+			{Key: "$set", Value: bson.D{
+				{Key: "last_daily", Value: time.Now()},
 			}},
 		},
 	)
@@ -97,6 +121,7 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 					{Key: "guild_id", Value: guildID},
 					{Key: "guild_name", Value: guildName},
 					{Key: "balance", Value: 0},
+					{Key: "last_daily", Value: time.Now().AddDate(0, 0, -1)},
 				},
 			)
 			if err != nil {
