@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -75,6 +76,48 @@ func daily(ctx context.Context, userCollection *mongo.Collection, guildID int, u
 	return "You have received your daily " + strconv.Itoa(balance) + " coins!"
 	}
 
+func beg(ctx context.Context, userCollection *mongo.Collection, guildID int, userID int, balance int) (string) {
+	// Check if beg has reset
+	collectionResult, err := userCollection.FindOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+	).DecodeBytes()
+	if err != nil {
+		fmt.Printf("Error occurred while selecting from database! %s\n", err)
+		return "Error occurred while selecting from database! " + strings.Title(err.Error())
+	}
+	lastBeg := collectionResult.Lookup("last_beg").DateTime()
+	// Wait one minute before begging again
+	if time.Now().Unix() - lastBeg/1000 < 60 {
+		waitTime := int(60 - (time.Now().Unix() - lastBeg/1000))
+		return "You have already begged! Please wait " + strconv.Itoa(waitTime) + " seconds before begging again."
+	}
+	
+	result := userCollection.FindOneAndUpdate(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "balance", Value: balance},
+			}},
+			{Key: "$set", Value: bson.D{
+				{Key: "last_beg", Value: time.Now()},
+			}},
+		},
+	)
+	if result.Err() != nil {
+		fmt.Printf("Error occurred while inserting to database! %s\n", result.Err().Error())
+		return "Error occurred while inserting to database! " + strings.Title(result.Err().Error())
+	} 
+	return "You have received " + strconv.Itoa(balance) + " coins!"
+}
+
 func Economy(mongoURI string, guildID int, guildName string, userID int, userName string, operation string, balance int) (string) {
 	// fmt.Printf("%v %v %v %v", guildID, guildName, userID, userName)
 
@@ -122,6 +165,7 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 					{Key: "guild_name", Value: guildName},
 					{Key: "balance", Value: 0},
 					{Key: "last_daily", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
 				},
 			)
 			if err != nil {
@@ -142,6 +186,13 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 	
 	case "daily":
 		res := daily(ctx, userCollection, guildID, userID, balance)
+		return res
+	
+	case "beg":
+		// Generate random value between 1 and 10
+		rand.Seed(time.Now().UnixNano())
+		balance := rand.Intn(10) + 1
+		res := beg(ctx, userCollection, guildID, userID, balance)
 		return res
 	
 	case "insert":
