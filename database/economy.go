@@ -76,6 +76,7 @@ func daily(ctx context.Context, userCollection *mongo.Collection, guildID int, u
 	return "You have received your daily " + strconv.Itoa(balance) + " coins!"
 	}
 
+// mary beg
 func beg(ctx context.Context, userCollection *mongo.Collection, guildID int, userID int, balance int) (string) {
 	// Check if beg has reset
 	collectionResult, err := userCollection.FindOne(
