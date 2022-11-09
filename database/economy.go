@@ -191,7 +191,7 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 	case "beg":
 		// Generate random value between 1 and 10
 		rand.Seed(time.Now().UnixNano())
-		balance := rand.Intn(10) + 1
+		balance = rand.Intn(10) + 1
 		res := beg(ctx, userCollection, guildID, userID, balance)
 		return res
 	
