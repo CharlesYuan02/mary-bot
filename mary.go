@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"github.com/joho/godotenv"
@@ -61,6 +62,8 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 		_, err := session.ChannelMessageSend(message.ChannelID, "Test successful!")
 		if err != nil {
 			fmt.Printf("Error occurred during testing! %s\n", err)
+		} else {
+			return
 		}
 	}
 
@@ -71,23 +74,51 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 		return
 	}
 
+	// Get guild ID and name
+	guild, err1 := session.Guild(message.GuildID)
+	guildID, err2 := strconv.Atoi(guild.ID)
+	guildName := guild.Name
+	if err1 != nil {
+		fmt.Printf("Error retrieving guild details! %s\n", err1)
+	} else if err2 != nil {
+		fmt.Printf("Error converting guild ID! %s\n", err1)
+	}
+	userID, err3 := strconv.Atoi(message.Author.ID)
+	if err3 != nil {
+		fmt.Printf("Error converting user ID! %s\n", err1)
+	}
+	userName := message.Author.Username
+
 	command := strings.Split(message.Content, " ")
 	if command[0] == "mary" {
 		switch true {
+		
 		// mary test
 		case command[1] == "test" && len(command) == 2:
 			session.ChannelMessageSend(message.ChannelID, "Test successful!")
-			break
+		
 		// mary test connection -> checks if mongoDB connection is working
 		case command[1] == "test" && command[2] == "connection":
 			dbErr := database.TestConnection(MONGO_URI)
 			if dbErr != "" {
 				session.ChannelMessageSend(message.ChannelID, dbErr)
-				break
 			} else {
 				session.ChannelMessageSend(message.ChannelID, "Database connection successful!")
-			break
 			}
+		
+		// mary bal -> checks balance of message author
+		case command[1] == "bal":
+			res := database.CRUD(MONGO_URI, guildID, guildName, userID, userName, "bal", 0)
+			session.ChannelMessageSend(message.ChannelID, res)
+
+		// mary daily -> gives user 100 coins
+		case command[1] == "daily":
+			res := database.CRUD(MONGO_URI, guildID, guildName, userID, userName, "daily", 100)
+			session.ChannelMessageSend(message.ChannelID, res)
+		
+		default:
+			res := database.CRUD(MONGO_URI, guildID, guildName, userID, userName, command[1], 0)
+			session.ChannelMessageSend(message.ChannelID, res)
 		}
 	}
 }
