@@ -7,7 +7,7 @@ A Discord bot I created in Go. Her name is Mary. After receiving my offer to wor
 Disclaimer: The images are from an old MMORPG named <a href="https://elsword.koggames.com/">Elsword</a>. I take no credit.
 
 ## Getting Started
-To get started, you'll need to <a href="https://discord.com/developers/docs/intro">sign up</a> to become a Discord developer, create a bot (application), then get your token. 
+To get started, you'll need to <a href="https://discord.com/developers/docs/intro">sign up</a> to become a Discord developer, create a bot (application), then get your token. You'll also need a <a href="https://www.mongodb.com/cloud">MongoDB</a> Database Cluster URI, which you can find under SECURITY -> Database Access -> Connect -> Connect your application.
 
 ### Deployment
 Once you have your token, if you are deploying locally, create a .env file with the following:
@@ -23,32 +23,20 @@ go run mary.go
 
 ### Prerequisites
 ```
-module mary-bot
-
-go 1.19
-
-require (
-	github.com/bwmarrin/discordgo v0.26.1 // direct
-	github.com/joho/godotenv v1.4.0 // direct
-)
-
-require (
-	github.com/golang/snappy v0.0.1 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
-	github.com/klauspost/compress v1.13.6 // indirect
-	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
-	github.com/xdg-go/scram v1.1.1 // indirect
-	github.com/xdg-go/stringprep v1.0.3 // indirect
-	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
-	go.mongodb.org/mongo-driver v1.11.0 // indirect
-	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
-	golang.org/x/text v0.3.7 // indirect
-)
+github.com/bwmarrin/discordgo v0.26.1
+github.com/joho/godotenv v1.4.0
+go.mongodb.org/mongo-driver v1.11.0
 ```
+
+## Demo
+<img src="https://github.com/Chubbyman2/mary-bot/blob/main/docs/demo-1.PNG">
+
+## Built With
+### DiscordGo
+<a href="https://github.com/bwmarrin/discordgo">DiscordGo</a> is a Go package that provides low level bindings to the Discord chat client API. DiscordGo has nearly complete support for all of the Discord API endpoints, websocket interface, and voice interface. The backbone for this entire project.
+
+### MongoDB Go Driver
+The <a href="https://github.com/mongodb/mongo-go-driver">MongoDB Go Driver</a> allows me to store and retrieve data from a MongoDB noSQL database using Go. This is the backbone for the economy system.
 
 ## License
 This project is licensed under the MIT License - see the <a href="https://github.com/Chubbyman2/mary-bot/blob/main/LICENSE">LICENSE</a> file for details.
