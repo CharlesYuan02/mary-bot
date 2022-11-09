@@ -12,7 +12,46 @@ import (
 )
 
 
-func CRUD(mongoURI string, guildID int, guildName string, userID int, userName string, operation string, balance int) (string) {
+// mary bal
+func bal(ctx context.Context, userCollection *mongo.Collection, guildID int, userID int, balance int) (string) {
+	collectionResult, err := userCollection.FindOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+	).DecodeBytes()
+	if err != nil {
+		fmt.Printf("Error occurred while selecting from database! %s\n", err)
+		return "Error occurred while selecting from database! " + strings.Title(err.Error())
+	}
+	user := collectionResult.Lookup("user_name").StringValue()
+	bal := collectionResult.Lookup("balance").Int32()
+	return "User: " + user + "\nBalance: " + strconv.Itoa(int(bal))
+}
+
+// mary daily
+func daily(ctx context.Context, userCollection *mongo.Collection, guildID int, userID int, balance int) (string) {
+	result := userCollection.FindOneAndUpdate(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "balance", Value: balance},
+			}},
+		},
+	)
+	if result.Err() != nil {
+		fmt.Printf("Error occurred while inserting to database! %s\n", result.Err().Error())
+		return "Error occurred while inserting to database! " + strings.Title(result.Err().Error())
+	} 
+	return "You have received your daily " + strconv.Itoa(balance) + " coins!"
+	}
+
+func Economy(mongoURI string, guildID int, guildName string, userID int, userName string, operation string, balance int) (string) {
 	// fmt.Printf("%v %v %v %v", guildID, guildName, userID, userName)
 
 	// Connect to MongoDB
@@ -37,41 +76,48 @@ func CRUD(mongoURI string, guildID int, guildName string, userID int, userName s
 	serverDatabase := client.Database(strconv.Itoa(guildID))
 	userCollection := serverDatabase.Collection("Users")
 
-	switch operation {
-	case "bal":
-		collectionResult, err := userCollection.FindOne(
-			ctx,
-			bson.D{
-				{Key: "user_id", Value: userID},
-				{Key: "guild_id", Value: guildID},
-			},
-		).DecodeBytes()
-		if err != nil {
+	// Check if user exists in database
+	collectionResult, err := userCollection.FindOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+	).DecodeBytes()
+	_ = collectionResult // Unused variable
+	if err != nil {
+		// If user doesn't exist, create them
+		if err == mongo.ErrNoDocuments {
+			// Insert user into database
+			result, err := userCollection.InsertOne(
+				ctx,
+				bson.D{
+					{Key: "user_id", Value: userID},
+					{Key: "user_name", Value: userName},
+					{Key: "guild_id", Value: guildID},
+					{Key: "guild_name", Value: guildName},
+					{Key: "balance", Value: 0},
+				},
+			)
+			if err != nil {
+				fmt.Printf("Error occurred while inserting to database! %s\n", err)
+				return "Error occurred while inserting to database! " + strings.Title(err.Error())
+			}
+			fmt.Printf("Inserted user %s into database with ID %s\n", userName, result.InsertedID)
+		} else {
 			fmt.Printf("Error occurred while selecting from database! %s\n", err)
 			return "Error occurred while selecting from database! " + strings.Title(err.Error())
 		}
-		user := collectionResult.Lookup("user_name").StringValue()
-		bal := collectionResult.Lookup("balance").Int32()
-		return "User: " + user + "\nBalance: " + strconv.Itoa(int(bal))
+	}
+
+	switch operation {
+	case "bal":
+		res := bal(ctx, userCollection, guildID, userID, balance)
+		return res
 	
 	case "daily":
-		userCollection.FindOneAndUpdate(
-			ctx,
-			bson.D{
-				{Key: "user_id", Value: userID},
-				{Key: "guild_id", Value: guildID},
-			},
-			bson.D{
-				{Key: "$inc", Value: bson.D{
-					{Key: "balance", Value: balance},
-				}},
-			},
-		)
-		if err != nil {
-			fmt.Printf("Error occurred while inserting to database! %s\n", err)
-			return "Error occurred while inserting to database! " + strings.Title(err.Error())
-		} 
-		return "You have received your daily " + strconv.Itoa(balance) + " coins!"
+		res := daily(ctx, userCollection, guildID, userID, balance)
+		return res
 	
 	case "insert":
 		opts := options.Update().SetUpsert(true)
