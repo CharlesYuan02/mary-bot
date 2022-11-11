@@ -120,8 +120,6 @@ func beg(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 }
 
 func Economy(mongoURI string, guildID int, guildName string, userID int, userName string, operation string, balance int) (string) {
-	// fmt.Printf("%v %v %v %v", guildID, guildName, userID, userName)
-
 	// Connect to MongoDB
 	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
 	if err != nil {
@@ -181,48 +179,48 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 	}
 
 	switch operation {
-	case "bal":
-		res := bal(ctx, userCollection, guildID, userID, balance)
-		return res
-	
-	case "daily":
-		res := daily(ctx, userCollection, guildID, userID, balance)
-		return res
-	
-	case "beg":
-		// Generate random value between 1 and 10
-		rand.Seed(time.Now().UnixNano())
-		balance = rand.Intn(10) + 1
-		res := beg(ctx, userCollection, guildID, userID, balance)
-		return res
-	
-	case "insert":
-		opts := options.Update().SetUpsert(true)
-		collectionResult, err := userCollection.UpdateOne(
-			ctx,
-			bson.D{
-				{Key: "user_id", Value: userID},
-				{Key: "guild_id", Value: guildID},
-			},
-			bson.D{
-				{Key: "$set", Value: bson.D{
+		case "bal":
+			res := bal(ctx, userCollection, guildID, userID, balance)
+			return res
+		
+		case "daily":
+			res := daily(ctx, userCollection, guildID, userID, balance)
+			return res
+		
+		case "beg":
+			// Generate random value between 1 and 10
+			rand.Seed(time.Now().UnixNano())
+			balance = rand.Intn(10) + 1
+			res := beg(ctx, userCollection, guildID, userID, balance)
+			return res
+		
+		case "insert":
+			opts := options.Update().SetUpsert(true)
+			collectionResult, err := userCollection.UpdateOne(
+				ctx,
+				bson.D{
 					{Key: "user_id", Value: userID},
 					{Key: "guild_id", Value: guildID},
-					{Key: "user_name", Value: userName},
-					{Key: "guild_name", Value: guildName},
-					{Key: "balance", Value: balance},
-				}},
-			},
-			opts,
-		)
-		if err != nil {
-			fmt.Printf("Error occurred while inserting to database! %s\n", err)
-			return "Error occurred while inserting to database! " + strings.Title(err.Error())
-		} 
-		fmt.Println(collectionResult)
-	
-	default: 
-		return "Command not recognized!"
+				},
+				bson.D{
+					{Key: "$set", Value: bson.D{
+						{Key: "user_id", Value: userID},
+						{Key: "guild_id", Value: guildID},
+						{Key: "user_name", Value: userName},
+						{Key: "guild_name", Value: guildName},
+						{Key: "balance", Value: balance},
+					}},
+				},
+				opts,
+			)
+			if err != nil {
+				fmt.Printf("Error occurred while inserting to database! %s\n", err)
+				return "Error occurred while inserting to database! " + strings.Title(err.Error())
+			} 
+			fmt.Println(collectionResult)
+			return "Inserted user into database!"
+		
+		default: 
+			return "Command not recognized!"
 	}
-	return "Command not recognized!"
 }
