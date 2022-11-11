@@ -120,9 +120,26 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 		case command[1] == "beg":
 			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "beg", 0)
 			session.ChannelMessageSend(message.ChannelID, res)
+		
+		// mary pay @user amount -> gives user amount of coins
+
+		// mary leaderboard -> shows top 10 users with most coins
+
+		// mary help -> shows all commands
+
+		// mary rob @user -> steals 1-50 coins from user
+		case command[1] == "rob":
+			pingedUserID := strings.Trim(command[2], "<@!>")
+			pingedUser, err := strconv.Atoi(pingedUserID)
+			if err != nil {
+				fmt.Printf("Error converting pinged user ID! %s\n", err)
+			}
+			res := database.UserInteraction(MONGO_URI, guildID, guildName, userID, userName, pingedUser, "rob")
+			session.ChannelMessageSend(message.ChannelID, res)
 
 		// Everything else (will most likely return "Command not recognized!")
 		default:
+			fmt.Printf("%T\n", command[1])
 			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, command[1], 0)
 			session.ChannelMessageSend(message.ChannelID, res)
 		}

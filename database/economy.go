@@ -165,6 +165,7 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 					{Key: "balance", Value: 0},
 					{Key: "last_daily", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
 				},
 			)
 			if err != nil {
@@ -205,10 +206,13 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 				bson.D{
 					{Key: "$set", Value: bson.D{
 						{Key: "user_id", Value: userID},
-						{Key: "guild_id", Value: guildID},
 						{Key: "user_name", Value: userName},
+						{Key: "guild_id", Value: guildID},
 						{Key: "guild_name", Value: guildName},
-						{Key: "balance", Value: balance},
+						{Key: "balance", Value: 0},
+						{Key: "last_daily", Value: time.Now().AddDate(0, 0, -1)},
+						{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
+						{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
 					}},
 				},
 				opts,
