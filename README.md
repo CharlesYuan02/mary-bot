@@ -7,7 +7,7 @@ A Discord bot I created in Go. Her name is Mary. After receiving my offer to wor
 Disclaimer: The images are from an old MMORPG named <a href="https://elsword.koggames.com/">Elsword</a>. I take no credit.
 
 ## Getting Started
-To get started, you'll need to <a href="https://discord.com/developers/docs/intro">sign up</a> to become a Discord developer, create a bot (application), then get your token. You'll also need a <a href="https://www.mongodb.com/cloud">MongoDB</a> Database Cluster URI, which you can find under SECURITY -> Database Access -> Connect -> Connect your application.
+To get started, you'll need to <a href="https://discord.com/developers/docs/intro">sign up</a> to become a Discord developer, create a bot (application), then get your token. You'll also need a <a href="https://www.mongodb.com/cloud">MongoDB</a> Database Cluster URI, which you can find under SECURITY -> Database Access -> Connect -> Connect your application. Remember to whitelist your IP Address or allow all IP addresses if you're hosting!
 
 ### Prerequisites
 ```
