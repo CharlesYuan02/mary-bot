@@ -9,7 +9,7 @@ Disclaimer: The images are from an old MMORPG named <a href="https://elsword.kog
 ## Getting Started
 To get started, you'll need to <a href="https://discord.com/developers/docs/intro">sign up</a> to become a Discord developer, create a bot (application), then get your token. You'll also need a <a href="https://www.mongodb.com/cloud">MongoDB</a> Database Cluster URI, which you can find under SECURITY -> Database Access -> Connect -> Connect your application.
 
-### Deployment
+### Local Deployment
 Once you have your token, if you are deploying locally, create a .env file with the following:
 ```
 MONGO_URI = "mongodb+srv://<username>:<password>@<clustername>.<something>.mongodb.net/?retryWrites=true&w=majority"
@@ -20,6 +20,35 @@ TOKEN = "yourtoken"
 Then, you can run:
 ```
 go run mary.go
+```
+
+### Deployment on Google Cloud Virtual Machine
+First, you will need to <a href="https://medium.com/@emerson15dias/how-to-install-go-on-a-vm-virtual-box-running-ubuntu-under-windows-988ce34329eb">set up dependencies</a> on your virtual machine (i.e. wget, git, Go):
+```
+$ sudo apt-get install wget
+$ wget https://storage.googleapis.com/golang/go1.19.linux-amd64.tar.gz
+$ sudo tar -xvf go1.19.linux-amd64.tar.gz
+$ sudo mv go /usr/local
+$ sudo apt install git
+```
+Then, clone the repo and find your GOPATH directory:
+```
+$ git clone https://github.com/Chubbyman2/mary-bot.git
+$ pwd
+```
+Next, set up your go environment and .env file:
+```
+$ export GOROOT=/usr/local/go
+### Set GOPATH=[response from pwd], mine is /home/charlesyuan59
+$ export GOPATH=/home/charlesyuan59
+$ export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
+$ cd mary-bot
+$ sudo nano .env 
+### Copy-paste your env vars into this file, CTRL + X, Enter to save
+```
+Finally, you can run Mary:
+```
+$ go run mary.go
 ```
 
 ### Prerequisites
@@ -39,6 +68,9 @@ github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 
 ### MongoDB Go Driver
 The <a href="https://github.com/mongodb/mongo-go-driver">MongoDB Go Driver</a> allows me to store and retrieve data from a MongoDB noSQL database using Go. This is the backbone for the economy system.
+
+### Google Cloud 
+<a href="https://cloud.google.com/">Google Cloud</a>'s Compute Engine provides me with a virtual machine instance that I can ssh into, download my dependencies, and host Mary from. 
 
 ## License
 This project is licensed under the MIT License - see the <a href="https://github.com/Chubbyman2/mary-bot/blob/main/LICENSE">LICENSE</a> file for details.
