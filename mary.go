@@ -153,9 +153,10 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			res := database.UserInteraction(MONGO_URI, guildID, guildName, userID, userName, pingedUser, "pay", amount)
 			session.ChannelMessageSend(message.ChannelID, res)
 
-		// mary leaderboard -> shows top 10 users with most coins
-
-		// mary help -> shows all commands
+		// mary leaderboard -> shows users with the most coins in descending order
+		case command[1] == "leaderboard":
+			res := database.Leaderboard(MONGO_URI, guildID)
+			session.ChannelMessageSend(message.ChannelID, res)
 
 		// Everything else (will most likely return "Command not recognized!")
 		default:
