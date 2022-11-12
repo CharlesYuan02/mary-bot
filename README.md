@@ -31,7 +31,7 @@ go run mary.go
 ```
 
 ### Deployment on Google Cloud Virtual Machine
-First, you will need to <a href="https://medium.com/@emerson15dias/how-to-install-go-on-a-vm-virtual-box-running-ubuntu-under-windows-988ce34329eb">set up dependencies</a> on your virtual machine (i.e. wget, git, Go):
+First, if you haven't already, you'll need to create a <a href="https://cloud.google.com/">Google Cloud</a> account and enable the Compute Engine API. Follow the first part of <a href="https://cloud.google.com/blog/topics/developers-practitioners/build-and-run-discord-bot-top-google-cloud">these instructions</a> if you need help. After that, you will need to <a href="https://medium.com/@emerson15dias/how-to-install-go-on-a-vm-virtual-box-running-ubuntu-under-windows-988ce34329eb">set up dependencies</a> on your virtual machine (i.e. wget, git, Go):
 ```
 $ sudo apt-get install wget
 $ wget https://storage.googleapis.com/golang/go1.19.linux-amd64.tar.gz
