@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"github.com/joho/godotenv"
 	"github.com/bwmarrin/discordgo"
+	valid "github.com/asaskevich/govalidator"
 	database "mary-bot/database"
 )
 
@@ -120,12 +121,6 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 		case command[1] == "beg":
 			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "beg", 0)
 			session.ChannelMessageSend(message.ChannelID, res)
-		
-		// mary pay @user amount -> gives user amount of coins
-
-		// mary leaderboard -> shows top 10 users with most coins
-
-		// mary help -> shows all commands
 
 		// mary rob @user -> steals 1-50 coins from user
 		case command[1] == "rob":
@@ -134,8 +129,33 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			if err != nil {
 				fmt.Printf("Error converting pinged user ID! %s\n", err)
 			}
-			res := database.UserInteraction(MONGO_URI, guildID, guildName, userID, userName, pingedUser, "rob")
+			res := database.UserInteraction(MONGO_URI, guildID, guildName, userID, userName, pingedUser, "rob", 0)
 			session.ChannelMessageSend(message.ChannelID, res)
+
+		// mary pay @user amount -> gives user amount of coins
+		case command[1] == "pay":
+			if len(command) == 3 {
+				session.ChannelMessageSend(message.ChannelID, "Please specify an amount to be paid!")
+				return
+			} else if len(command) == 4 && valid.IsInt(command[3]) == false { // &^ is bitwise AND NOT
+				session.ChannelMessageSend(message.ChannelID, "Please specify a valid amount to be paid!")
+				return
+			}
+			pingedUserID := strings.Trim(command[2], "<@!>")
+			pingedUser, err := strconv.Atoi(pingedUserID)
+			if err != nil {
+				fmt.Printf("Error converting pinged user ID! %s\n", err)
+			}
+			amount, err := strconv.Atoi(command[3])
+			if err != nil {
+				fmt.Printf("Error converting amount! %s\n", err)
+			}
+			res := database.UserInteraction(MONGO_URI, guildID, guildName, userID, userName, pingedUser, "pay", amount)
+			session.ChannelMessageSend(message.ChannelID, res)
+
+		// mary leaderboard -> shows top 10 users with most coins
+
+		// mary help -> shows all commands
 
 		// Everything else (will most likely return "Command not recognized!")
 		default:

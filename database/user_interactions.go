@@ -80,8 +80,62 @@ func rob(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 	return "You successfully robbed " + strconv.Itoa(robAmount) + " coins from " + pingedUserName + "!"
 }
 
+func pay(ctx context.Context, userCollection *mongo.Collection, guildID int, userID int, pingedUserID int, amount int) (string) {
+	// Check if user is paying themselves 
+	/*if userID == pingedUserID {
+		return "You cannot pay yourself!"
+	}*/
+	
+	// Check if user has enough money to pay
+	userResult, err := userCollection.FindOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+	).DecodeBytes()
+	if err != nil {
+		fmt.Printf("Error occurred while selecting from database! %s\n", err)
+		return "Error occurred while selecting from database! " + strings.Title(err.Error())
+	}
+	userBalance := int(userResult.Lookup("balance").Int32())
+	pingedUserName := userResult.Lookup("user_name").StringValue()
+	if userBalance < amount {
+		return "You do not have enough money to pay that amount!"
+	}
+
+	// Update user's balance
+	userCollection.FindOneAndUpdate(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "balance", Value: -amount},
+			}},
+		},
+	)
+
+	// Update pinged user's balance
+	userCollection.FindOneAndUpdate(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: pingedUserID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "balance", Value: amount},
+			}},
+		},
+	)
+	return "You successfully paid " + pingedUserName + " " + strconv.Itoa(amount) + " coins!"
+}
+
 // All the economy commands that require pinging another user
-func UserInteraction(mongoURI string, guildID int, guildName string, userID int, userName string, pingedUserID int, operation string) (string) {
+func UserInteraction(mongoURI string, guildID int, guildName string, userID int, userName string, pingedUserID int, operation string, amount int) (string) {
 	// Connect to MongoDB
 	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
 	if err != nil {
@@ -158,6 +212,8 @@ func UserInteraction(mongoURI string, guildID int, guildName string, userID int,
 	switch operation {
 		case "rob":
 			return rob(ctx, userCollection, guildID, userID, pingedUserID)
+		case "pay":
+			return pay(ctx, userCollection, guildID, userID, pingedUserID, amount)
 		default: 
 			return "Command not recognized!"
 	}
