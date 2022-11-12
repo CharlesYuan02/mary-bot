@@ -26,6 +26,7 @@ go run mary.go
 github.com/bwmarrin/discordgo v0.26.1
 github.com/joho/godotenv v1.4.0
 go.mongodb.org/mongo-driver v1.11.0
+github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 ```
 
 ## Demo
