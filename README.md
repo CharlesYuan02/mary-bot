@@ -9,6 +9,14 @@ Disclaimer: The images are from an old MMORPG named <a href="https://elsword.kog
 ## Getting Started
 To get started, you'll need to <a href="https://discord.com/developers/docs/intro">sign up</a> to become a Discord developer, create a bot (application), then get your token. You'll also need a <a href="https://www.mongodb.com/cloud">MongoDB</a> Database Cluster URI, which you can find under SECURITY -> Database Access -> Connect -> Connect your application.
 
+### Prerequisites
+```
+github.com/bwmarrin/discordgo v0.26.1
+github.com/joho/godotenv v1.4.0
+go.mongodb.org/mongo-driver v1.11.0
+github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
+```
+
 ### Local Deployment
 Once you have your token, if you are deploying locally, create a .env file with the following:
 ```
@@ -49,14 +57,6 @@ $ sudo nano .env
 Finally, you can run Mary:
 ```
 $ go run mary.go
-```
-
-### Prerequisites
-```
-github.com/bwmarrin/discordgo v0.26.1
-github.com/joho/godotenv v1.4.0
-go.mongodb.org/mongo-driver v1.11.0
-github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 ```
 
 ## Demo
