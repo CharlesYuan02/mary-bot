@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options" 
 	"go.mongodb.org/mongo-driver/bson"
+	commands "mary-bot/commands"
 )
 
 // mary rob @pingedUser
@@ -82,9 +83,10 @@ func rob(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 
 func pay(ctx context.Context, userCollection *mongo.Collection, guildID int, userID int, pingedUserID int, amount int) (string) {
 	// Check if user is paying themselves 
-	/*if userID == pingedUserID {
+	// Owner can pay themselves to test the command
+	if userID == pingedUserID && !commands.IsOwner(userID) {
 		return "You cannot pay yourself!"
-	}*/
+	}
 	
 	// Check if user has enough money to pay
 	userResult, err := userCollection.FindOne(
@@ -100,23 +102,25 @@ func pay(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 	}
 	userBalance := int(userResult.Lookup("balance").Int32())
 	pingedUserName := userResult.Lookup("user_name").StringValue()
-	if userBalance < amount {
+	if userBalance < amount && !commands.IsOwner(userID) {
 		return "You do not have enough money to pay that amount!"
 	}
 
-	// Update user's balance
-	userCollection.FindOneAndUpdate(
-		ctx,
-		bson.D{
-			{Key: "user_id", Value: userID},
-			{Key: "guild_id", Value: guildID},
-		},
-		bson.D{
-			{Key: "$inc", Value: bson.D{
-				{Key: "balance", Value: -amount},
-			}},
-		},
-	)
+	// Update user's balance if not owner -> owner can pay an infinite amount
+	if !commands.IsOwner(userID) {
+		userCollection.FindOneAndUpdate(
+			ctx,
+			bson.D{
+				{Key: "user_id", Value: userID},
+				{Key: "guild_id", Value: guildID},
+			},
+			bson.D{
+				{Key: "$inc", Value: bson.D{
+					{Key: "balance", Value: -amount},
+				}},
+			},
+		)
+	}
 
 	// Update pinged user's balance
 	userCollection.FindOneAndUpdate(

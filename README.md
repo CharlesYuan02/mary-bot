@@ -13,7 +13,8 @@ To get started, you'll need to <a href="https://discord.com/developers/docs/intr
 Once you have your token, if you are deploying locally, create a .env file with the following:
 ```
 MONGO_URI = "mongodb+srv://<username>:<password>@<clustername>.<something>.mongodb.net/?retryWrites=true&w=majority"
-TOKEN = "yourtokenhere"
+OWNER_ID = "yourDiscordUserID"
+TOKEN = "yourtoken"
 ```
 
 Then, you can run:
