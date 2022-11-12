@@ -44,6 +44,13 @@ func main() {
 		fmt.Println("Error opening Discord connection!")
 		return
 	}
+
+	// Set Mary's status (make sure to do this after discord.Open())
+	err = discord.UpdateGameStatus(0, "with her sister Eve")
+	if err != nil {
+		fmt.Printf("Error setting Mary's status! %s\n", err)
+		return
+	}
 	
 	fmt.Println("Mary, online and ready!")
 
