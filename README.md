@@ -31,9 +31,10 @@ go run mary.go
 ```
 
 ### Deployment on Google Cloud Virtual Machine
-First, if you haven't already, you'll need to create a <a href="https://cloud.google.com/">Google Cloud</a> account and enable the Compute Engine API. Follow the first part of <a href="https://cloud.google.com/blog/topics/developers-practitioners/build-and-run-discord-bot-top-google-cloud">these instructions</a> if you need help. After that, you will need to <a href="https://medium.com/@emerson15dias/how-to-install-go-on-a-vm-virtual-box-running-ubuntu-under-windows-988ce34329eb">set up dependencies</a> on your virtual machine (i.e. wget, git, Go):
+First, if you haven't already, you'll need to create a <a href="https://cloud.google.com/">Google Cloud</a> account and enable the Compute Engine API. Follow the first part of <a href="https://cloud.google.com/blog/topics/developers-practitioners/build-and-run-discord-bot-top-google-cloud">these instructions</a> if you need help. After that, you will need to <a href="https://medium.com/@emerson15dias/how-to-install-go-on-a-vm-virtual-box-running-ubuntu-under-windows-988ce34329eb">set up dependencies</a> on your virtual machine (i.e. wget, git, Go, tmux):
 ```
 $ sudo apt-get install wget
+$ sudo apt-get install tmux
 $ wget https://storage.googleapis.com/golang/go1.19.linux-amd64.tar.gz
 $ sudo tar -xvf go1.19.linux-amd64.tar.gz
 $ sudo mv go /usr/local
@@ -44,19 +45,33 @@ Then, clone the repo and find your GOPATH directory:
 $ git clone https://github.com/Chubbyman2/mary-bot.git
 $ pwd
 ```
-Next, set up your go environment and .env file:
+Next, create a .env file with your environment variables:
 ```
-$ export GOROOT=/usr/local/go
-### Set GOPATH=[response from pwd], mine is /home/charlesyuan59
-$ export GOPATH=/home/charlesyuan59
-$ export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
 $ cd mary-bot
 $ sudo nano .env 
 ### Copy-paste your env vars into this file, CTRL + X, Enter to save
 ```
-Finally, you can run Mary:
+Afterwards, set up your go environment in a tmux session (see <a href="https://www.youtube.com/watch?v=VEn70C7S5Q8">this tutorial</a> for details).
+```
+$ tmux
+$ export GOROOT=/usr/local/go
+### Set GOPATH=[response from pwd], mine is /home/charlesyuan59
+$ export GOPATH=/home/charlesyuan59
+$ export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
+```
+Finally, you can run Mary in the tmux session:
 ```
 $ go run mary.go
+### CTRL+B (hold), then D to exit out of tmux session
+```
+Additionally, here are some useful commands for tmux:
+```
+### Show tmux instances and their id numbers
+$ tmux ls 
+### Join tmux instance
+$ tmux a -t [id]
+### Kill tmux session
+$ tmux kill-session
 ```
 
 ## Demo
@@ -69,8 +84,8 @@ $ go run mary.go
 ### MongoDB Go Driver
 The <a href="https://github.com/mongodb/mongo-go-driver">MongoDB Go Driver</a> allows me to store and retrieve data from a MongoDB noSQL database using Go. This is the backbone for the economy system.
 
-### Google Cloud 
-<a href="https://cloud.google.com/">Google Cloud</a>'s Compute Engine provides me with a virtual machine instance that I can ssh into, download my dependencies, and host Mary from. 
+### Google Cloud + tmux
+<a href="https://cloud.google.com/">Google Cloud</a>'s Compute Engine provides me with a virtual machine instance that I can ssh into, download my dependencies, and host Mary from. I then used <a href="https://en.wikipedia.org/wiki/Tmux">tmux</a> to run the code in the background, so that when I close the secure shell window, Mary keeps running.
 
 ## License
 This project is licensed under the MIT License - see the <a href="https://github.com/Chubbyman2/mary-bot/blob/main/LICENSE">LICENSE</a> file for details.
