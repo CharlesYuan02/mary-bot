@@ -27,7 +27,11 @@ func bal(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 	}
 	user := collectionResult.Lookup("user_name").StringValue()
 	bal := collectionResult.Lookup("balance").Int32()
-	return "User: " + user + "\nBalance: " + strconv.Itoa(int(bal))
+	if user == "" && bal == 0 {
+		return "That person is not currently playing the game!"
+	} else {
+		return "User: " + user + "\nBalance: " + strconv.Itoa(int(bal))
+	}
 }
 
 // mary daily

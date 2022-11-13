@@ -154,8 +154,29 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 		
 		// mary bal -> checks balance of message author
 		case command[1] == "bal":
-			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "bal", 0)
-			session.ChannelMessageSend(message.ChannelID, res)
+			// Return balance of user
+			if len(command) == 2 {
+				res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "bal", 0)
+				session.ChannelMessageSend(message.ChannelID, res)
+			} else if len(command) == 3 {
+				// Return balance of mentioned user
+				if strings.HasPrefix(command[2], "<@") && strings.HasSuffix(command[2], ">") {
+					mentionedUser := strings.TrimPrefix(command[2], "<@")
+					mentionedUser = strings.TrimSuffix(mentionedUser, ">")
+					mentionedUser = strings.TrimPrefix(mentionedUser, "!")
+					mentionedUserID, err := strconv.Atoi(mentionedUser)
+					if err != nil {
+						session.ChannelMessageSend(message.ChannelID, "Error retrieving balance!")
+					} else {
+						res := database.Economy(MONGO_URI, guildID, guildName, mentionedUserID, "", "bal", 0)
+						session.ChannelMessageSend(message.ChannelID, res)
+					}
+				} else {
+					session.ChannelMessageSend(message.ChannelID, "Error retrieving balance!")
+				}
+			} else {
+				session.ChannelMessageSend(message.ChannelID, "Error retrieving balance!")
+			}
 
 		// mary daily -> gives user 100 coins
 		case command[1] == "daily":
