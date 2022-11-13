@@ -4,6 +4,8 @@
 ## Introduction
 A Discord bot I created in Go. Her name is Mary. After receiving my offer to work at Uber, I knew I had to learn Go right away, as my interviewer informed me that that was the primary language they used for back end development. I decided to learn some noSQL and MongoDB to implement a database-driven game so that people will actually interact with her (cuz my classmate said that Eve was "so useless"). 
 
+Want to invite her to your server? Use <a href="https://discord.com/api/oauth2/authorize?client_id=1038557818200019025&permissions=8&scope=bot">this link</a>.
+
 Disclaimer: The images are from an old MMORPG named <a href="https://elsword.koggames.com/">Elsword</a>. I take no credit.
 
 ## Getting Started
