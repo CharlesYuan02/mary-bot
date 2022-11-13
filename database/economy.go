@@ -12,7 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-
 // mary bal
 func bal(ctx context.Context, userCollection *mongo.Collection, guildID int, userID int, balance int) (string) {
 	collectionResult, err := userCollection.FindOne(
@@ -166,6 +165,7 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 					{Key: "last_daily", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_gamble", Value: time.Now().AddDate(0, 0, -1)},
 				},
 			)
 			if err != nil {
@@ -195,6 +195,18 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 			res := beg(ctx, userCollection, guildID, userID, balance)
 			return res
 		
+		case "gamble":
+			res := Gamble(ctx, userCollection, guildID, userID, balance)
+			return res
+		
+		case "lottery":
+			res := Lottery(ctx, userCollection, guildID, userID, balance)
+			return res
+		
+		case "slots":
+			res := Slots(ctx, userCollection, guildID, userID, balance)
+			return res
+		
 		case "insert":
 			opts := options.Update().SetUpsert(true)
 			collectionResult, err := userCollection.UpdateOne(
@@ -213,6 +225,7 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 						{Key: "last_daily", Value: time.Now().AddDate(0, 0, -1)},
 						{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
 						{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
+						{Key: "last_gamble", Value: time.Now().AddDate(0, 0, -1)},
 					}},
 				},
 				opts,

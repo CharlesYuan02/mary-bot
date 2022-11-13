@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 	"github.com/joho/godotenv"
 	"github.com/bwmarrin/discordgo"
 	valid "github.com/asaskevich/govalidator"
@@ -163,6 +164,53 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 		// mary leaderboard -> shows users with the most coins in descending order
 		case command[1] == "leaderboard":
 			res := database.Leaderboard(MONGO_URI, guildID)
+			session.ChannelMessageSend(message.ChannelID, res)
+
+		// mary gamble amount -> gamble amount of coins
+		case command[1] == "gamble":
+			if len(command) == 2 {
+				session.ChannelMessageSend(message.ChannelID, "Please specify an amount to be gambled!")
+				return
+			} else if len(command) == 3 && valid.IsInt(command[2]) == false { // &^ is bitwise AND NOT
+				session.ChannelMessageSend(message.ChannelID, "Please specify a valid amount to be gambled!")
+				return
+			} else {
+				session.ChannelMessageSend(message.ChannelID, "Gambling " + command[2] + " coins...")
+				time.Sleep(1 * time.Second)
+			}
+			amount, err := strconv.Atoi(command[2])	
+			if err != nil {
+				fmt.Printf("Error converting amount! %s\n", err)
+			}
+			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "gamble", amount)
+			session.ChannelMessageSend(message.ChannelID, res)
+
+		// mary lottery -> enter lottery for 100 coins
+		case command[1] == "lottery":
+			if len(command) > 2 {
+				session.ChannelMessageSend(message.ChannelID, "You can only spend 100 coins on the lottery!")
+				time.Sleep(500 * time.Millisecond)
+				session.ChannelMessageSend(message.ChannelID, "Gambling 100 coins...")
+				time.Sleep(1 * time.Second)
+			} else {
+				session.ChannelMessageSend(message.ChannelID, "Gambling 100 coins...")
+				time.Sleep(1 * time.Second)
+			}
+			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "lottery", 100)
+			session.ChannelMessageSend(message.ChannelID, res)
+
+		// mary slots -> play slots for 10 coins
+		case command[1] == "slots":
+			if len(command) > 2 {
+				session.ChannelMessageSend(message.ChannelID, "You can only spend 10 coins on slots!")
+				time.Sleep(500 * time.Millisecond)
+				session.ChannelMessageSend(message.ChannelID, "Gambling 10 coins...")
+				time.Sleep(1 * time.Second)
+			} else {
+				session.ChannelMessageSend(message.ChannelID, "Gambling 10 coins...")
+				time.Sleep(1 * time.Second)
+			}
+			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "slots", 10)
 			session.ChannelMessageSend(message.ChannelID, res)
 
 		// Everything else (will most likely return "Command not recognized!")
