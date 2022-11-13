@@ -15,25 +15,6 @@ import (
 
 
 func Gamble(ctx context.Context, userCollection *mongo.Collection, guildID int, userID int, balance int) (string) {
-	// Subtract balance from user
-	result := userCollection.FindOneAndUpdate(
-		ctx,
-		bson.D{
-			{Key: "user_id", Value: userID},
-			{Key: "guild_id", Value: guildID},
-		},
-		bson.D{
-			{Key: "$inc", Value: bson.D{
-				{Key: "balance", Value: -balance},
-			}},
-		},
-		options.FindOneAndUpdate().SetUpsert(true),
-	)
-	if result.Err() != nil {
-		fmt.Printf("Error occurred while updating database! %s\n", result.Err())
-		return "Error occurred while updating database! " + strings.Title(result.Err().Error())
-	}
-
 	// Get last_gamble from database
 	collectionResult, err := userCollection.FindOne(
 		ctx,
@@ -51,6 +32,31 @@ func Gamble(ctx context.Context, userCollection *mongo.Collection, guildID int, 
 	// Wait ten seconds before gambling again
 	if time.Now().Unix() - lastGamble/1000 < 10 && commands.IsOwner(userID) == false {
 		return "<@" + strconv.Itoa(userID) + ">, you must wait 10 seconds before gambling again!"
+	}
+
+	// Check if user has enough to gamble
+	userBalance := collectionResult.Lookup("balance").Int64()
+	if userBalance < int64(balance) {
+		return "<@" + strconv.Itoa(userID) + ">, you don't have enough coins to gamble that much!"
+	}
+
+	// Subtract balance from user
+	result := userCollection.FindOneAndUpdate(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "balance", Value: -balance},
+			}},
+		},
+		options.FindOneAndUpdate().SetUpsert(true),
+	)
+	if result.Err() != nil {
+		fmt.Printf("Error occurred while updating database! %s\n", result.Err())
+		return "Error occurred while updating database! " + strings.Title(result.Err().Error())
 	}
 
 	// Roll dice 
@@ -85,25 +91,6 @@ func Gamble(ctx context.Context, userCollection *mongo.Collection, guildID int, 
 }
 
 func Lottery(ctx context.Context, userCollection *mongo.Collection, guildID int, userID int, balance int) (string) {
-	// Subtract balance from user
-	result := userCollection.FindOneAndUpdate(
-		ctx,
-		bson.D{
-			{Key: "user_id", Value: userID},
-			{Key: "guild_id", Value: guildID},
-		},
-		bson.D{
-			{Key: "$inc", Value: bson.D{
-				{Key: "balance", Value: -balance},
-			}},
-		},
-		options.FindOneAndUpdate().SetUpsert(true),
-	)
-	if result.Err() != nil {
-		fmt.Printf("Error occurred while updating database! %s\n", result.Err())
-		return "Error occurred while updating database! " + strings.Title(result.Err().Error())
-	}
-
 	// Get last_gamble from database
 	collectionResult, err := userCollection.FindOne(
 		ctx,
@@ -121,6 +108,31 @@ func Lottery(ctx context.Context, userCollection *mongo.Collection, guildID int,
 	// Wait ten seconds before gambling again
 	if time.Now().Unix() - lastGamble/1000 < 10 && commands.IsOwner(userID) == false {
 		return "<@" + strconv.Itoa(userID) + ">, you must wait 10 seconds before gambling again!"
+	}
+
+	// Check if user has enough to gamble
+	userBalance := collectionResult.Lookup("balance").Int64()
+	if userBalance < int64(balance) {
+		return "<@" + strconv.Itoa(userID) + ">, you don't have enough coins to gamble that much!"
+	}
+
+	// Subtract balance from user
+	result := userCollection.FindOneAndUpdate(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "balance", Value: -balance},
+			}},
+		},
+		options.FindOneAndUpdate().SetUpsert(true),
+	)
+	if result.Err() != nil {
+		fmt.Printf("Error occurred while updating database! %s\n", result.Err())
+		return "Error occurred while updating database! " + strings.Title(result.Err().Error())
 	}
 
 	// Roll dice 
@@ -155,25 +167,6 @@ func Lottery(ctx context.Context, userCollection *mongo.Collection, guildID int,
 }
 
 func Slots(ctx context.Context, userCollection *mongo.Collection, guildID int, userID int, balance int) (string) {
-	// Subtract balance from user
-	result := userCollection.FindOneAndUpdate(
-		ctx,
-		bson.D{
-			{Key: "user_id", Value: userID},
-			{Key: "guild_id", Value: guildID},
-		},
-		bson.D{
-			{Key: "$inc", Value: bson.D{
-				{Key: "balance", Value: -balance},
-			}},
-		},
-		options.FindOneAndUpdate().SetUpsert(true),
-	)
-	if result.Err() != nil {
-		fmt.Printf("Error occurred while updating database! %s\n", result.Err())
-		return "Error occurred while updating database! " + strings.Title(result.Err().Error())
-	}
-
 	// Get last_gamble from database
 	collectionResult, err := userCollection.FindOne(
 		ctx,
@@ -191,6 +184,31 @@ func Slots(ctx context.Context, userCollection *mongo.Collection, guildID int, u
 	// Wait ten seconds before gambling again
 	if time.Now().Unix() - lastGamble/1000 < 10 && commands.IsOwner(userID) == false {
 		return "<@" + strconv.Itoa(userID) + ">, you must wait 10 seconds before gambling again!"
+	}
+
+	// Check if user has enough to gamble
+	userBalance := collectionResult.Lookup("balance").Int64()
+	if userBalance < int64(balance) {
+		return "<@" + strconv.Itoa(userID) + ">, you don't have enough coins to gamble that much!"
+	}
+	
+	// Subtract balance from user
+	result := userCollection.FindOneAndUpdate(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "balance", Value: -balance},
+			}},
+		},
+		options.FindOneAndUpdate().SetUpsert(true),
+	)
+	if result.Err() != nil {
+		fmt.Printf("Error occurred while updating database! %s\n", result.Err())
+		return "Error occurred while updating database! " + strings.Title(result.Err().Error())
 	}
 
 	// Roll dice 
