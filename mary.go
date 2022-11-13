@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"encoding/json"
+	"mary-bot/commands"
+	database "mary-bot/database"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,10 +13,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"github.com/joho/godotenv"
-	"github.com/bwmarrin/discordgo"
+
 	valid "github.com/asaskevich/govalidator"
-	database "mary-bot/database"
+	"github.com/bwmarrin/discordgo"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -124,6 +126,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				"mary help -> shows all commands\n" +
 				"mary test -> tests if Mary is online\n" +
 				"mary test connection -> tests if Mary can connect to the database\n" +
+				"mary bankrupt @user (admin only)-> reduces the user's balance to 0\n" +
 				"mary quote -> shows a random quote\n" +
 				"mary bal -> shows your balance\n" +
 				"mary bal @user -> shows the balance of the mentioned user\n" +
@@ -134,6 +137,20 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				"mary lottery [amount] -> enter the lottery with 100 coins\n" +
 				"mary slots [amount] -> play slots with 10 coins\n" +
 				"```")
+		
+		// mary bankrupt (admin only) -> reduces the user's balance to 0 
+		case command[1] == "bankrupt":
+			if len(command) == 3 {
+				pingedUserID := strings.Trim(command[2], "<@!>")
+				pingedUser, err := strconv.Atoi(pingedUserID)
+				if err != nil {
+					fmt.Printf("Error converting pinged user ID! %s\n", err)
+				}
+				res := commands.Bankrupt(MONGO_URI, guildID, userID, pingedUser)
+				session.ChannelMessageSend(message.ChannelID, res)
+			} else {
+				session.ChannelMessageSend(message.ChannelID, "Please mention a user! Are you trying to bankrupt yourself?")
+			}
 		
 		// mary quote -> shows a random quote
 		case command[1] == "quote":
