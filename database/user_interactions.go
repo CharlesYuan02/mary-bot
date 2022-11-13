@@ -219,6 +219,6 @@ func UserInteraction(mongoURI string, guildID int, guildName string, userID int,
 		case "pay":
 			return pay(ctx, userCollection, guildID, userID, pingedUserID, amount)
 		default: 
-			return "Command not recognized!"
+			return "I'm sorry, I dont recognize that command."
 	}
 }
