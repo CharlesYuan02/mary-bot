@@ -61,7 +61,7 @@ func Bankrupt(mongoURI string, guildID int, userID int, pingedUserID int) (strin
 
 	// Update the balance of the pinged user to 0 and get user name
 	filter := bson.D{{Key: "user_id", Value: pingedUserID}}
-	update := bson.D{{Key: "$set", Value: bson.D{{Key: "balance", Value: 0}}}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "balance", Value: int64(0)}}}}
 	var result bson.M
 	err = collection.FindOneAndUpdate(ctx, filter, update).Decode(&result)
 	if err != nil {
