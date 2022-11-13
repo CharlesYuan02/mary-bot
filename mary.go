@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"encoding/json"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -114,6 +117,40 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			} else {
 				session.ChannelMessageSend(message.ChannelID, "Database connection successful!")
 			}
+
+		// mary help -> shows all commands
+		case command[1] == "help":
+			session.ChannelMessageSend(message.ChannelID, "```Commands:\n\n" +
+				"mary help -> shows all commands\n" +
+				"mary test -> tests if Mary is online\n" +
+				"mary test connection -> tests if Mary can connect to the database\n" +
+				"mary quote -> shows a random quote\n" +
+				"mary bal -> shows your balance\n" +
+				"mary bal @user -> shows the balance of the mentioned user\n" +
+				"mary daily -> gives you 100 coins\n" +
+				"mary pay/give @user [amount] -> pays the mentioned user the specified amount of coins\n" +
+				"mary top/leaderboard -> shows the top 10 users with the most coins\n" +
+				"mary gamble [amount] -> gamble the specified amount of coins\n" +
+				"mary lottery [amount] -> enter the lottery with 100 coins\n" +
+				"mary slots [amount] -> play slots with 10 coins\n" +
+				"```")
+		
+		// mary quote -> shows a random quote
+		case command[1] == "quote":
+			quote, err := http.Get("https://api.quotable.io/random")
+			if err != nil {
+				session.ChannelMessageSend(message.ChannelID, "Error retrieving quote!")
+			} else {
+				defer quote.Body.Close()
+				quoteData, err := ioutil.ReadAll(quote.Body)
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Error retrieving quote!")
+				} else {
+					var quoteJSON map[string]interface{}
+					json.Unmarshal(quoteData, &quoteJSON)
+					session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("```%s\n\n- %s```", quoteJSON["content"], quoteJSON["author"]))
+				}
+			}
 		
 		// mary bal -> checks balance of message author
 		case command[1] == "bal":
@@ -140,8 +177,8 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			res := database.UserInteraction(MONGO_URI, guildID, guildName, userID, userName, pingedUser, "rob", 0)
 			session.ChannelMessageSend(message.ChannelID, res)
 
-		// mary pay @user amount -> gives user amount of coins
-		case command[1] == "pay":
+		// mary pay/give @user amount -> gives user amount of coins
+		case command[1] == "pay" || command[1] == "give":
 			if len(command) == 3 {
 				session.ChannelMessageSend(message.ChannelID, "Please specify an amount to be paid!")
 				return
@@ -161,8 +198,8 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			res := database.UserInteraction(MONGO_URI, guildID, guildName, userID, userName, pingedUser, "pay", amount)
 			session.ChannelMessageSend(message.ChannelID, res)
 
-		// mary leaderboard -> shows users with the most coins in descending order
-		case command[1] == "leaderboard":
+		// mary top/leaderboard -> shows users with the most coins in descending order
+		case command[1] == "leaderboard" || command[1] == "top":
 			res := database.Leaderboard(MONGO_URI, guildID)
 			session.ChannelMessageSend(message.ChannelID, res)
 
@@ -213,7 +250,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "slots", 10)
 			session.ChannelMessageSend(message.ChannelID, res)
 
-		// Everything else (will most likely return "Command not recognized!")
+		// Everything else (will most likely return "I'm sorry, I dont recognize that command.")
 		default:
 			fmt.Printf("%T\n", command[1])
 			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, command[1], 0)
