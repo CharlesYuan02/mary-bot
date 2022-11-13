@@ -32,7 +32,7 @@ func rob(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 		fmt.Printf("Error occurred while selecting from database! %s\n", err)
 		return "Error occurred while selecting from database! " + strings.Title(err.Error())
 	}
-	userBalance := userResult.Lookup("balance").Int32()
+	userBalance := userResult.Lookup("balance").Int64()
 	pingedUserName := userResult.Lookup("user_name").StringValue()
 	if userBalance < 100 {
 		return "That person is too poor to rob!"
@@ -100,8 +100,7 @@ func pay(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 		fmt.Printf("Error occurred while selecting from database! %s\n", err)
 		return "Error occurred while selecting from database! " + strings.Title(err.Error())
 	}
-	userBalance := int(userResult.Lookup("balance").Int32())
-	pingedUserName := userResult.Lookup("user_name").StringValue()
+	userBalance := int(userResult.Lookup("balance").Int64())
 	if userBalance < amount && !commands.IsOwner(userID) {
 		return "You do not have enough money to pay that amount!"
 	}
@@ -135,7 +134,8 @@ func pay(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 			}},
 		},
 	)
-	return "You successfully paid " + pingedUserName + " " + strconv.Itoa(amount) + " coins!"
+	// Ping user with return message
+	return "You successfully paid <@" + strconv.Itoa(pingedUserID) + "> " + strconv.Itoa(amount) + " coins!"
 }
 
 // All the economy commands that require pinging another user

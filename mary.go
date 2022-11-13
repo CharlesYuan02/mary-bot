@@ -223,6 +223,9 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			} else if len(command) == 4 && valid.IsInt(command[3]) == false { // &^ is bitwise AND NOT
 				session.ChannelMessageSend(message.ChannelID, "Please specify a valid amount to be paid!")
 				return
+			} else if strings.HasPrefix(command[3], "-") {
+				session.ChannelMessageSend(message.ChannelID, "Please specify a positive amount to be paid!")
+				return
 			}
 			pingedUserID := strings.Trim(command[2], "<@!>")
 			pingedUser, err := strconv.Atoi(pingedUserID)
@@ -248,6 +251,9 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				return
 			} else if len(command) == 3 && valid.IsInt(command[2]) == false { // &^ is bitwise AND NOT
 				session.ChannelMessageSend(message.ChannelID, "Please specify a valid amount to be gambled!")
+				return
+			} else if strings.HasPrefix(command[2], "-") {
+				session.ChannelMessageSend(message.ChannelID, "Please specify a positive amount to be gambled!")
 				return
 			} else {
 				session.ChannelMessageSend(message.ChannelID, "Gambling " + command[2] + " coins...")

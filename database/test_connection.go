@@ -86,13 +86,13 @@ func Leaderboard(mongoURI string, guildID int) (string) {
 
 	// Sort leaderboard by balance (highest to lowest)
 	sort.Slice(leaderboardArray, func(i, j int) bool {
-		return leaderboardArray[i]["balance"].(int32) > leaderboardArray[j]["balance"].(int32)
+		return leaderboardArray[i]["balance"].(int64) > leaderboardArray[j]["balance"].(int64)
 	})
 
 	// Create leaderboard string
 	leaderboard := ""
 	for i, result := range leaderboardArray {
-		leaderboard += strconv.Itoa(i+1) + ". " + result["user_name"].(string) + ": " + strconv.Itoa(int(result["balance"].(int32))) + "\n"
+		leaderboard += strconv.Itoa(i+1) + ". " + result["user_name"].(string) + ": " + strconv.Itoa(int(result["balance"].(int64))) + "\n"
 	}
 
 	return leaderboard

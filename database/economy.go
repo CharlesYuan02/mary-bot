@@ -26,11 +26,11 @@ func bal(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 		return "Error occurred while selecting from database! " + strings.Title(err.Error())
 	}
 	user := collectionResult.Lookup("user_name").StringValue()
-	bal := collectionResult.Lookup("balance").Int32()
+	bal := collectionResult.Lookup("balance").Int64()
 	if user == "" && bal == 0 {
 		return "That person is not currently playing the game!"
 	} else {
-		return "User: " + user + "\nBalance: " + strconv.Itoa(int(bal))
+		return "<@" + strconv.Itoa(userID) + ">, you have " + strconv.Itoa(int(bal)) + " coins."
 	}
 }
 
@@ -54,7 +54,7 @@ func daily(ctx context.Context, userCollection *mongo.Collection, guildID int, u
 		hours := waitTime / 3600
 		minutes := (waitTime % 3600) / 60
 		seconds := waitTime % 60
-		return "You have already claimed your daily! Please wait " + strconv.Itoa(hours) + " hours, " + strconv.Itoa(minutes) + " minutes, and " + strconv.Itoa(seconds) + " seconds before claiming again."
+		return "<@" + strconv.Itoa(userID) + ">, you have already claimed your daily! Please wait " + strconv.Itoa(hours) + " hours, " + strconv.Itoa(minutes) + " minutes, and " + strconv.Itoa(seconds) + " seconds before claiming again."
 	}
 	
 	result := userCollection.FindOneAndUpdate(
@@ -76,7 +76,7 @@ func daily(ctx context.Context, userCollection *mongo.Collection, guildID int, u
 		fmt.Printf("Error occurred while inserting to database! %s\n", result.Err().Error())
 		return "Error occurred while inserting to database! " + strings.Title(result.Err().Error())
 	} 
-	return "You have received your daily " + strconv.Itoa(balance) + " coins!"
+	return "<@" + strconv.Itoa(userID) + ">, you have received your daily " + strconv.Itoa(balance) + " coins!"
 	}
 
 // mary beg
@@ -97,7 +97,7 @@ func beg(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 	// Wait one minute before begging again
 	if time.Now().Unix() - lastBeg/1000 < 60 {
 		waitTime := int(60 - (time.Now().Unix() - lastBeg/1000))
-		return "You have already begged! Please wait " + strconv.Itoa(waitTime) + " seconds before begging again."
+		return "<@" + strconv.Itoa(userID) + ">, you have already begged! Please wait " + strconv.Itoa(waitTime) + " seconds before begging again."
 	}
 	
 	result := userCollection.FindOneAndUpdate(
@@ -119,10 +119,15 @@ func beg(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 		fmt.Printf("Error occurred while inserting to database! %s\n", result.Err().Error())
 		return "Error occurred while inserting to database! " + strings.Title(result.Err().Error())
 	} 
-	return "You have received " + strconv.Itoa(balance) + " coins!"
+	return "<@" + strconv.Itoa(userID) + ">, you have received " + strconv.Itoa(balance) + " coins!"
 }
 
 func Economy(mongoURI string, guildID int, guildName string, userID int, userName string, operation string, balance int) (string) {
+	// Return error if balance is negative
+	if balance < 0 {
+		return "Balance cannot be negative!"
+	}
+
 	// Connect to MongoDB
 	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
 	if err != nil {
@@ -165,7 +170,7 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 					{Key: "user_name", Value: userName},
 					{Key: "guild_id", Value: guildID},
 					{Key: "guild_name", Value: guildName},
-					{Key: "balance", Value: 0},
+					{Key: "balance", Value: int64(0)}, // Enter balance as int64 value
 					{Key: "last_daily", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
@@ -225,7 +230,7 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 						{Key: "user_name", Value: userName},
 						{Key: "guild_id", Value: guildID},
 						{Key: "guild_name", Value: guildName},
-						{Key: "balance", Value: 0},
+						{Key: "balance", Value: int64(0)}, // Enter balance as int64 value
 						{Key: "last_daily", Value: time.Now().AddDate(0, 0, -1)},
 						{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
 						{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
@@ -242,6 +247,6 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 			return "Inserted user into database!"
 		
 		default: 
-			return "Command not recognized!"
+			return "I'm sorry, I dont recognize that command."
 	}
 }
