@@ -95,7 +95,7 @@ Players can get coins, but so what? That's why I want to integrate a shop with c
 Players should also be able to see their stats on a custom profile message, along with the items in their inventory that they bought from the shop. This will be a nice extension of what I'm currently doing with MongoDB.
 
 ### Rich Embeds
-In order to display shop, items, profile, inventory and outputs of other commands such as leaderboard, I want to integrate rich embeds. 
+In order to display shop, items, profile, inventory and outputs of other commands such as help and leaderboard, I want to integrate rich embeds. 
 
 ## License
 This project is licensed under the MIT License - see the <a href="https://github.com/Chubbyman2/mary-bot/blob/main/LICENSE">LICENSE</a> file for details.
