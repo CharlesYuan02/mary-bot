@@ -1,4 +1,4 @@
-package main 
+package main
 
 import (
 	"fmt"
@@ -98,7 +98,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 	userName := message.Author.Username
 
 	command := strings.Split(message.Content, " ")
-	if command[0] == "mary" {
+	if strings.ToLower(command[0]) == "mary" {
 		switch true {
 		
 		// mary test
