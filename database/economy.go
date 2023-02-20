@@ -12,6 +12,98 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// mary profile
+// This is not integrated into Economy because it returns multiple values
+func GetProfile(mongoURI string, guildID int, guildName string, userID int, userName string) (string, int64, string, int) {
+	// Connect to MongoDB
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
+	if err != nil {
+		fmt.Printf("Error occurred creating MongoDB client! %s\n", err)
+		return "Error occurred creating MongoDB client! " + strings.Title(err.Error()), 0, "", 0
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // Timeout for connection is 10 secs
+	defer cancel() // Fix for memory leak
+	err = client.Connect(ctx)
+	if err != nil {
+		fmt.Printf("Error occurred while connecting to database! %s\n", err)
+		return "Error occurred while connecting to database! " + strings.Title(err.Error()), 0, "", 0
+	}
+
+	// Disconnect from database
+	defer client.Disconnect(ctx) // Occurs as last line of main() function
+
+	// If database for server doesn't exist, create it
+	serverDatabase := client.Database(strconv.Itoa(guildID))
+	userCollection := serverDatabase.Collection("Users")
+
+	// Check if user exists in database
+	collectionResult, err := userCollection.FindOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+	).DecodeBytes()
+	_ = collectionResult // Unused variable
+	if err != nil {
+		// If user doesn't exist, create them
+		if err == mongo.ErrNoDocuments {
+			// Insert user into database
+			result, err := userCollection.InsertOne(
+				ctx,
+				bson.D{
+					{Key: "user_id", Value: userID},
+					{Key: "user_name", Value: userName},
+					{Key: "guild_id", Value: guildID},
+					{Key: "guild_name", Value: guildName},
+					{Key: "balance", Value: int64(0)}, // Enter balance as int64 value
+					{Key: "last_daily", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_gamble", Value: time.Now().AddDate(0, 0, -1)},
+				},
+			)
+			if err != nil {
+				fmt.Printf("Error occurred while inserting to database! %s\n", err)
+				return "Error occurred while inserting to database! " + strings.Title(err.Error()), 0, "", 0
+			}
+			fmt.Printf("Inserted user %s into database with ID %s\n", userName, result.InsertedID)
+		} else {
+			fmt.Printf("Error occurred while selecting from database! %s\n", err)
+			return "Error occurred while selecting from database! " + strings.Title(err.Error()), 0, "", 0
+		}
+
+		// If user does not exist, return an error message
+		// Remember, we don't let people add others to the game; Only the person themselves can
+		return "That person is not currently playing the game!", 0, "", 0
+	}
+
+	// This is where the actual profile command starts
+	// UserID and GuildID are already known
+	user := collectionResult.Lookup("user_name").StringValue()
+
+	bal := collectionResult.Lookup("balance").Int64()
+	serverName := collectionResult.Lookup("guild_name").StringValue()
+	lastDaily := collectionResult.Lookup("last_daily").DateTime()
+
+	// Calculate the duration since lastDaily
+	durationSinceLastDaily := time.Since(time.Unix(lastDaily/1000, 0))
+
+	// Calculate the duration until nextDaily
+	durationUntilNextDaily := time.Hour - durationSinceLastDaily
+
+	// Convert the remaining duration to hours 
+	hoursUntilNextDaily := int(durationUntilNextDaily.Hours())
+
+	// If hoursUntilNextDaily is negative, set it to 0
+	if hoursUntilNextDaily < 0 {
+		hoursUntilNextDaily = 0
+	}
+
+	return user, bal, serverName, hoursUntilNextDaily
+}
+
 // mary bal
 func bal(ctx context.Context, userCollection *mongo.Collection, guildID int, userID int, balance int) (string) {
 	collectionResult, err := userCollection.FindOne(

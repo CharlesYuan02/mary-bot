@@ -16,16 +16,16 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
+	// "github.com/joho/godotenv"
 )
 
 func main() {
 	// Load token from env vars
-	err := godotenv.Load(".env")
-	if err != nil {
-		fmt.Printf("Error loading environment variables! %s\n", err)
-		return
-	}
+	// envErr := godotenv.Load(".env")
+	// if envErr != nil {
+	// 	fmt.Printf("Error loading environment variables! %s\n", err)
+	// 	return
+	// }
 	TOKEN := os.Getenv("TOKEN")
 	if TOKEN == "" {
 		fmt.Println("Token not found!")
@@ -45,7 +45,7 @@ func main() {
 	discord.AddHandler(createMessage)
 	discord.Identify.Intents = discordgo.IntentsGuildMessages
 	
-	err = discord.Open()
+	err := discord.Open()
 	if err != nil {
 		fmt.Println("Error opening Discord connection!")
 		return
@@ -126,8 +126,10 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				"mary help -> shows all commands\n" +
 				"mary test -> tests if Mary is online\n" +
 				"mary test connection -> tests if Mary can connect to the database\n" +
-				"mary bankrupt @user (admin only)-> reduces the user's balance to 0\n" +
+				"mary del [amount] (admin only) -> deletes a set number of messages\n" +
+				"mary bankrupt @user (admin only) -> reduces the user's balance to 0\n" +
 				"mary quote -> shows a random quote\n" +
+				"mary profile [optional: @user] -> shows your profile or a specified user's profile\n" +		
 				"mary bal -> shows your balance\n" +
 				"mary bal @user -> shows the balance of the mentioned user\n" +
 				"mary daily -> gives you 100 coins\n" +
@@ -137,6 +139,116 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				"mary lottery [amount] -> enter the lottery with 100 coins\n" +
 				"mary slots [amount] -> play slots with 10 coins\n" +
 				"```")
+		
+		// mary profile -> shows your profile
+		case command[1] == "profile":
+			// Declare variables so that they can be used outside of the if statement
+			// Because apparently declaring variables inside an if statement limits their scope to the conditional
+			var user string
+			var bal int64
+			var serverName string
+			var timeLeft int
+			var avatarURL string
+
+			// If user mentions another user, get their profile
+			if len(message.Mentions) > 0 {
+				// Get mentioned user's ID and username
+				mentionedUser := message.Mentions[0]
+				mentionedUserID, _:= strconv.Atoi(mentionedUser.ID)
+				mentionedUserName := mentionedUser.Username
+
+				// Get mentioned user's profile
+				user, bal, serverName, timeLeft = database.GetProfile(MONGO_URI, guildID, guildName, mentionedUserID, mentionedUserName)
+
+				// If the user variable returns the string "That person is not currently playing the game!"
+				// Then return an error message
+				if user == "That person is not currently playing the game!" {
+					session.ChannelMessageSend(message.ChannelID, "That person is not currently playing the game!")
+					time.Sleep(1 * time.Second)
+					session.ChannelMessageSend(message.ChannelID, "I will add that user to the database now...")
+					return
+				}
+
+				// Get mentioned user's profile picture URL
+				avatarURL = mentionedUser.AvatarURL("")		
+			} else {
+				// Otherwise, get user's profile
+				// Get username 
+				userName := message.Author.Username
+				// Get user's profile
+				user, bal, serverName, timeLeft = database.GetProfile(MONGO_URI, guildID, guildName, userID, userName)
+
+				if user == "That person is not currently playing the game!" {
+					session.ChannelMessageSend(message.ChannelID, "You are not currently playing the game!")
+					time.Sleep(1 * time.Second)
+					session.ChannelMessageSend(message.ChannelID, "I will add you to the database now...")
+					return
+				}
+				
+				// Get user's profile picture URL
+				avatarURL = message.Author.AvatarURL("")
+			}
+			
+			// Extract hours, minutes and seconds from hoursUntilNextDaily
+			hoursLeft := int(timeLeft)
+			minutesLeft := int(hoursLeft % 60)
+			secondsLeft := int(minutesLeft % 60)
+
+			// Create embed
+			embed := &discordgo.MessageEmbed{
+				Title: "Profile",
+				Thumbnail: &discordgo.MessageEmbedThumbnail{
+					URL: avatarURL,
+				},
+				Color: 0xffc0cb,
+				Fields: []*discordgo.MessageEmbedField{
+					{
+						Name: "Username",
+						Value: user,
+						Inline: true,
+					},
+					{
+						Name: "Balance",
+						Value: strconv.FormatInt(bal, 10) + " coins",
+						Inline: true,
+					},
+					{
+						Name: "Server",
+						Value: serverName,
+						Inline: true,
+					},
+					{
+						Name: "Next Daily",
+						Value: strconv.Itoa(hoursLeft) + "h " + strconv.Itoa(minutesLeft) + "m " + strconv.Itoa(secondsLeft) + "s",
+						Inline: true,
+					},
+				},
+			}
+			// Send embed
+			session.ChannelMessageSendEmbed(message.ChannelID, embed)
+
+		// mary del (admin only) -> deletes a set number of messages
+		case command[1] == "del" && len(command) == 3:
+			// Check if third argument is an integer
+			_, err := strconv.Atoi(command[2])
+			if err != nil {
+				session.ChannelMessageSend(message.ChannelID, "Please enter a valid number!")
+			} else {
+				// Amount to delete
+				amount, err := strconv.Atoi(command[2])
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Error occurred while converting amount!" + strings.Title(err.Error()))
+				}
+				
+				// Get user ID
+				userID, err := strconv.Atoi(message.Author.ID)
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Error occurred while getting user ID!" + strings.Title(err.Error()))
+				}
+				
+				res := commands.DeleteMessages(session, message, userID, amount)
+				session.ChannelMessageSend(message.ChannelID, res)
+			}
 		
 		// mary bankrupt (admin only) -> reduces the user's balance to 0 
 		case command[1] == "bankrupt":

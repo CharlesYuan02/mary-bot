@@ -6,7 +6,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"github.com/joho/godotenv"
+	"github.com/bwmarrin/discordgo"
+	//"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options" 
 	"go.mongodb.org/mongo-driver/bson"
@@ -15,11 +16,11 @@ import (
 // Helper function to allow for commands by only me (the creator of the bot)
 func IsOwner(userID int) (bool) {
 	// Load owner user id from env vars
-	err := godotenv.Load(".env")
-	if err != nil {
-		fmt.Printf("Error loading environment variables! %s\n", err)
-		return false
-	}
+	// err := godotenv.Load(".env")
+	// if err != nil {
+	// 	fmt.Printf("Error loading environment variables! %s\n", err)
+	// 	return false
+	// }
 
 	OWNER_ID := os.Getenv("OWNER_ID")
 	if OWNER_ID == "" {
@@ -35,6 +36,29 @@ func IsOwner(userID int) (bool) {
 		return true
 	}
 	return false
+}
+
+func DeleteMessages(session *discordgo.Session, message *discordgo.MessageCreate, userID int, amount int) (string) {
+	// Check if user is owner
+	if !IsOwner(userID) {
+		return "Apologies, this command is not available to you."
+	}
+
+	// Get the previous amount of messages 
+	// Delete amount messages (not including the command message)
+	messages, err := session.ChannelMessages(message.ChannelID, amount+1, "", "", "")
+	if err != nil {
+		return "Error occurred while getting messages! " + strings.Title(err.Error())
+	}
+
+	// Delete the messages
+	for _, message := range messages {
+		err = session.ChannelMessageDelete(message.ChannelID, message.ID)
+		if err != nil {
+			return "Error occurred while deleting messages! " + strings.Title(err.Error())
+		}
+	}
+	return "Successfully deleted " + strconv.Itoa(amount) + " messages!"
 }
 
 func Bankrupt(mongoURI string, guildID int, userID int, pingedUserID int) (string) {
