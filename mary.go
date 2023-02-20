@@ -16,14 +16,14 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/bwmarrin/discordgo"
-	// "github.com/joho/godotenv"
+	//"github.com/joho/godotenv"
 )
 
 func main() {
 	// Load token from env vars
 	// envErr := godotenv.Load(".env")
 	// if envErr != nil {
-	// 	fmt.Printf("Error loading environment variables! %s\n", err)
+	// 	fmt.Printf("Error loading environment variables! %s\n", envErr)
 	// 	return
 	// }
 	TOKEN := os.Getenv("TOKEN")
@@ -122,23 +122,71 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 
 		// mary help -> shows all commands
 		case command[1] == "help":
-			session.ChannelMessageSend(message.ChannelID, "```Commands:\n\n" +
-				"mary help -> shows all commands\n" +
-				"mary test -> tests if Mary is online\n" +
-				"mary test connection -> tests if Mary can connect to the database\n" +
-				"mary del [amount] (admin only) -> deletes a set number of messages\n" +
-				"mary bankrupt @user (admin only) -> reduces the user's balance to 0\n" +
-				"mary quote -> shows a random quote\n" +
-				"mary profile [optional: @user] -> shows your profile or a specified user's profile\n" +		
-				"mary bal -> shows your balance\n" +
-				"mary bal @user -> shows the balance of the mentioned user\n" +
-				"mary daily -> gives you 100 coins\n" +
-				"mary pay/give @user [amount] -> pays the mentioned user the specified amount of coins\n" +
-				"mary top/leaderboard -> shows the top 10 users with the most coins\n" +
-				"mary gamble [amount] -> gamble the specified amount of coins\n" +
-				"mary lottery [amount] -> enter the lottery with 100 coins\n" +
-				"mary slots [amount] -> play slots with 10 coins\n" +
-				"```")
+			// Get Mary's avatar
+			mary, err := discordgo.New("Bot " + os.Getenv("TOKEN"))
+			if err != nil {
+				session.ChannelMessageSend(message.ChannelID, "Error retrieving my avatar!")
+			}
+			maryUser, err := mary.User("@me")
+			if err != nil {
+				session.ChannelMessageSend(message.ChannelID, "Error retrieving my avatar!")
+			}
+			maryAvatar := maryUser.AvatarURL("")
+
+			// Create a rich embed
+			embed := &discordgo.MessageEmbed{
+				Title: "Mary's Commands",
+				Color: 0xffc0cb,
+				Thumbnail: &discordgo.MessageEmbedThumbnail{
+					URL: maryAvatar,
+				},
+				Fields: []*discordgo.MessageEmbedField{{
+						Name: "mary help",
+						Value: "Shows all commands",
+					},{
+						Name: "mary test",
+						Value: "Tests if Mary is online",
+					},{
+						Name: "mary test connection",
+						Value: "Tests if Mary can connect to the database",
+					},{
+						Name: "mary del [amount] (admin only)",
+						Value: "Deletes a set number of messages",
+					},{
+						Name: "mary bankrupt @user (admin only)",
+						Value: "Reduces the user's balance to 0",
+					},{
+						Name: "mary quote",
+						Value: "Shows a random quote",
+					},{
+						Name: "mary profile [optional: @user]",
+						Value: "Shows your profile or a specified user's profile",
+					},{
+						Name: "mary bal [optional: @user]",
+						Value: "Shows your balance or a specified user's balance",
+					},{
+						Name: "mary daily",
+						Value: "Gives you 100 coins",
+					},{
+						Name: "mary pay/give @user [amount]",
+						Value: "Pays the mentioned user the specified amount of coins",
+					},{
+						Name: "mary top/leaderboard",
+						Value: "Shows the top 10 users with the highest balance",
+					},{
+						Name: "mary gamble [amount]",
+						Value: "Gamble the specified amount of coins",
+					},{
+						Name: "mary lottery [amount]",
+						Value: "Enter the lottery with 100 coins",
+					},{
+						Name: "mary slots [amount]",
+						Value: "Play slots with 10 coins",
+					},
+				},
+			}
+			
+			session.ChannelMessageSendEmbed(message.ChannelID, embed)
 		
 		// mary profile -> shows your profile
 		case command[1] == "profile":
@@ -353,8 +401,55 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 
 		// mary top/leaderboard -> shows users with the most coins in descending order
 		case command[1] == "leaderboard" || command[1] == "top":
-			res := database.Leaderboard(MONGO_URI, guildID)
-			session.ChannelMessageSend(message.ChannelID, res)
+			err, res := database.Leaderboard(MONGO_URI, guildID)
+			if err != "" { // Different error than usual
+				session.ChannelMessageSend(message.ChannelID, err)
+			}
+				
+			// Get profile picture of the server
+			mary, err3 := discordgo.New("Bot " + os.Getenv("TOKEN"))
+			if err3 != nil {
+				session.ChannelMessageSend(message.ChannelID, "Error retrieving server profile picture!")
+			}
+			guild, err4 := mary.Guild(message.Message.GuildID)
+			if err4 != nil {
+				session.ChannelMessageSend(message.ChannelID, "Error retrieving server profile picture!")
+			}
+			guildIconURL := guild.IconURL()
+
+			// Create rich embed 
+			embed := &discordgo.MessageEmbed{
+				Title: "Leaderboard",
+				Color: 0xffc0cb,
+				Thumbnail: &discordgo.MessageEmbedThumbnail{
+					URL: guildIconURL,
+				},
+			}
+
+			// Use the values from res dict to create fields
+			for _, data := range res {
+				fields := []*discordgo.MessageEmbedField{
+					{
+						Name: "Rank",
+						Value: strconv.Itoa(int(data["Rank"].(int))),
+						Inline: true,
+					},{
+						Name: "Name",
+						Value: data["Name"].(string),
+						Inline: true,
+					},{
+						Name: "Balance",
+						Value: strconv.FormatInt(data["Balance"].(int64), 10),
+						Inline: true,
+					},
+				}
+				
+				embed.Fields = append(embed.Fields, fields...)
+			}
+
+			session.ChannelMessageSendEmbed(message.ChannelID, embed)
+
+			//session.ChannelMessageSend(message.ChannelID, res)
 
 		// mary gamble amount -> gamble amount of coins
 		case command[1] == "gamble":

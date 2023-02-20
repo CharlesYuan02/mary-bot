@@ -39,11 +39,11 @@ func TestConnection(mongoURI string) (string) {
 	return ""
 }
 
-func Leaderboard(mongoURI string, guildID int) (string) {
+func Leaderboard(mongoURI string, guildID int) (string, map[string]map[string]interface{}) {
 	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		fmt.Printf("Error occurred creating MongoDB client! %s\n", err)
-		return "Error occurred creating MongoDB client! " + strings.Title(err.Error())
+		return "Error occurred creating MongoDB client! " + strings.Title(err.Error()), nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -51,7 +51,7 @@ func Leaderboard(mongoURI string, guildID int) (string) {
 	err = client.Connect(ctx)
 	if err != nil {
 		fmt.Printf("Error occurred while connecting to database! %s\n", err)
-		return "Error occurred while connecting to database! " + strings.Title(err.Error())
+		return "Error occurred while connecting to database! " + strings.Title(err.Error()), nil
 	}
 
 	// Disconnect from database
@@ -67,7 +67,7 @@ func Leaderboard(mongoURI string, guildID int) (string) {
 	)
 	if err != nil {
 		fmt.Printf("Error occurred while selecting from database! %s\n", err)
-		return "Error occurred while selecting from database! " + strings.Title(err.Error())
+		return "Error occurred while selecting from database! " + strings.Title(err.Error()), nil
 	}
 
 	// Create an array for leaderboard
@@ -78,7 +78,7 @@ func Leaderboard(mongoURI string, guildID int) (string) {
 		err := leaderboardResult.Decode(&result)
 		if err != nil {
 			fmt.Printf("Error occurred while decoding result! %s\n", err)
-			return "Error occurred while decoding result! " + strings.Title(err.Error())
+			return "Error occurred while decoding result! " + strings.Title(err.Error()), nil
 		}
 		// Append result to leaderboard array
 		leaderboardArray = append(leaderboardArray, result)
@@ -89,11 +89,14 @@ func Leaderboard(mongoURI string, guildID int) (string) {
 		return leaderboardArray[i]["balance"].(int64) > leaderboardArray[j]["balance"].(int64)
 	})
 
-	// Create leaderboard string
-	leaderboard := ""
-	for i, result := range leaderboardArray {
-		leaderboard += strconv.Itoa(i+1) + ". " + result["user_name"].(string) + ": " + strconv.Itoa(int(result["balance"].(int64))) + "\n"
+	// Return a dict containing {user_id: user_name, balance: balance} for each user
+	ret := make(map[string]map[string]interface{})
+	for _, result := range leaderboardArray {
+		ret[strconv.Itoa(int(result["user_id"].(int64)))] = map[string]interface{}{
+			"Rank": len(ret) + 1,
+			"Name": result["user_name"].(string),
+			"Balance": result["balance"].(int64),
+		}
 	}
-
-	return leaderboard
+	return "", ret
 }
