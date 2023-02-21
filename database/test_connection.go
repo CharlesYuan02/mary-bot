@@ -39,7 +39,7 @@ func TestConnection(mongoURI string) (string) {
 	return ""
 }
 
-func Leaderboard(mongoURI string, guildID int) (string, map[string]map[string]interface{}) {
+func Leaderboard(mongoURI string, guildID int) (string, []map[string]interface{}) {
 	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		fmt.Printf("Error occurred creating MongoDB client! %s\n", err)
@@ -72,7 +72,6 @@ func Leaderboard(mongoURI string, guildID int) (string, map[string]map[string]in
 
 	// Create an array for leaderboard
 	var leaderboardArray []bson.M
-
 	for leaderboardResult.Next(ctx) {
 		var result bson.M
 		err := leaderboardResult.Decode(&result)
@@ -84,19 +83,35 @@ func Leaderboard(mongoURI string, guildID int) (string, map[string]map[string]in
 		leaderboardArray = append(leaderboardArray, result)
 	}
 
-	// Sort leaderboard by balance (highest to lowest)
-	sort.Slice(leaderboardArray, func(i, j int) bool {
-		return leaderboardArray[i]["balance"].(int64) > leaderboardArray[j]["balance"].(int64)
-	})
-
 	// Return a dict containing {user_id: user_name, balance: balance} for each user
 	ret := make(map[string]map[string]interface{})
 	for _, result := range leaderboardArray {
 		ret[strconv.Itoa(int(result["user_id"].(int64)))] = map[string]interface{}{
-			"Rank": len(ret) + 1,
 			"Name": result["user_name"].(string),
 			"Balance": result["balance"].(int64),
 		}
 	}
-	return "", ret
+
+	// Sort the slice in decreasing order of "Balance"
+	sort.Slice(leaderboardArray, func(i, j int) bool {
+		return leaderboardArray[i]["balance"].(int64) > leaderboardArray[j]["balance"].(int64)
+	})
+
+	// Create a new map with "Rank" field added
+	for i, result := range leaderboardArray {
+		ret[strconv.Itoa(int(result["user_id"].(int64)))]["Rank"] = i + 1
+	}
+
+	// Convert map to slice
+	retSlice := make([]map[string]interface{}, 0, len(ret))
+	for _, v := range ret {
+		retSlice = append(retSlice, v)
+	}
+
+	// Sort the slice in decreasing order of "Rank"
+	sort.Slice(retSlice, func(i, j int) bool {
+		return retSlice[i]["Rank"].(int) < retSlice[j]["Rank"].(int)
+	})
+	
+	return "", retSlice
 }

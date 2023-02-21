@@ -16,16 +16,16 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/bwmarrin/discordgo"
-	//"github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	// Load token from env vars
-	// envErr := godotenv.Load(".env")
-	// if envErr != nil {
-	// 	fmt.Printf("Error loading environment variables! %s\n", envErr)
-	// 	return
-	// }
+	envErr := godotenv.Load(".env")
+	if envErr != nil {
+		fmt.Printf("Error loading environment variables! %s\n", envErr)
+		return
+	}
 	TOKEN := os.Getenv("TOKEN")
 	if TOKEN == "" {
 		fmt.Println("Token not found!")
@@ -443,13 +443,9 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 						Inline: true,
 					},
 				}
-				
 				embed.Fields = append(embed.Fields, fields...)
 			}
-
 			session.ChannelMessageSendEmbed(message.ChannelID, embed)
-
-			//session.ChannelMessageSend(message.ChannelID, res)
 
 		// mary gamble amount -> gamble amount of coins
 		case command[1] == "gamble":
