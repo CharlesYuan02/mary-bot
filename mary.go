@@ -16,16 +16,16 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/bwmarrin/discordgo"
-	//"github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	// Load token from env vars
-	// envErr := godotenv.Load(".env")
-	// if envErr != nil {
-	// 	fmt.Printf("Error loading environment variables! %s\n", envErr)
-	// 	return
-	// }
+	envErr := godotenv.Load(".env")
+	if envErr != nil {
+		fmt.Printf("Error loading environment variables! %s\n", envErr)
+		return
+	}
 	TOKEN := os.Getenv("TOKEN")
 	if TOKEN == "" {
 		fmt.Println("Token not found!")
@@ -446,6 +446,37 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				embed.Fields = append(embed.Fields, fields...)
 			}
 			session.ChannelMessageSendEmbed(message.ChannelID, embed)
+
+		// mary trivia -> starts a trivia game
+		case command[1] == "trivia":
+			err, res, correctAnswer, difficulty := database.Trivia(session, message)
+			if err != "" {
+				session.ChannelMessageSend(message.ChannelID, err)
+			} else {
+				session.ChannelMessageSendEmbed(message.ChannelID, res)
+
+				// Wait for user to respond
+				msg, err := database.WaitForResponse(session, message.ChannelID, message.Author.ID)
+				if err != nil {
+					fmt.Printf("Error waiting for user response! %s\n", err)
+				}
+				if msg == "You ran out of time!" {
+					session.ChannelMessageSend(message.ChannelID, msg)
+					return
+				}
+
+				// Check if user's response is correct
+				if strings.ToLower(msg) == strings.ToLower(correctAnswer) {
+					session.ChannelMessageSend(message.ChannelID, "Correct!")
+					// Give user coins based on difficulty
+					// Just use my userID to pay them coins
+					if difficulty == "easy" {
+						fmt.Print("easy")
+					}
+				} else {
+					session.ChannelMessageSend(message.ChannelID, "Incorrect! The correct answer is " + correctAnswer + ".")
+				}
+			}
 
 		// mary gamble amount -> gamble amount of coins
 		case command[1] == "gamble":
