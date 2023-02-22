@@ -469,10 +469,8 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				if strings.ToLower(msg) == strings.ToLower(correctAnswer) {
 					session.ChannelMessageSend(message.ChannelID, "Correct!")
 					// Give user coins based on difficulty
-					// Just use my userID to pay them coins
-					if difficulty == "easy" {
-						fmt.Print("easy")
-					}
+					res := database.PayForCorrectAnswer(session, message, difficulty, MONGO_URI, guildID, userID)
+					session.ChannelMessageSend(message.ChannelID, res)
 				} else {
 					session.ChannelMessageSend(message.ChannelID, "Incorrect! The correct answer is " + correctAnswer + ".")
 				}

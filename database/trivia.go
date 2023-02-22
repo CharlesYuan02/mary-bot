@@ -1,14 +1,19 @@
 package database
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"github.com/bwmarrin/discordgo"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options" 
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // TriviaQuestion represents a single trivia question from the API
@@ -73,6 +78,9 @@ func Trivia(session *discordgo.Session, message *discordgo.MessageCreate) (strin
 		}
 	}
 
+	// Capitalize the first letter of the difficulty
+	question.Difficulty = strings.Title(question.Difficulty)
+
 	// Send the question as a rich embed
 	embed := &discordgo.MessageEmbed{
 		Title:       question.Question,
@@ -113,4 +121,72 @@ func WaitForResponse(session *discordgo.Session, channelID string, authorID stri
     case <-time.After(10 * time.Second):
         return "You ran out of time!", nil // Return an error indicating a timeout
     }
+}
+
+// Pay the user for their correct answer
+func PayForCorrectAnswer(session *discordgo.Session, message *discordgo.MessageCreate, difficulty string, mongoURI string, guildID int, userID int) (string) {
+	// Calculate the amount of coins to pay the user
+	amount := 0
+	switch strings.ToLower(difficulty) {
+	case "easy":
+		amount = 50
+	case "medium":
+		amount = 100
+	case "hard":
+		amount = 200
+	}
+
+	// Connect to MongoDB
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
+	if err != nil {
+		return "Error occurred creating MongoDB client! " + strings.Title(err.Error())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // Timeout for connection is 10 secs
+	defer cancel() // Fix for memory leak
+	err = client.Connect(ctx)
+	if err != nil {
+		return "Error occurred while connecting to database! " + strings.Title(err.Error())
+	}
+
+	// Disconnect from database
+	defer client.Disconnect(ctx) // Occurs as last line of main() function
+
+	// If database for server doesn't exist, create it
+	serverDatabase := client.Database(strconv.Itoa(guildID))
+	userCollection := serverDatabase.Collection("Users")
+
+	// Check if user exists in database
+	collectionResult, err := userCollection.FindOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+	).DecodeBytes()
+	_ = collectionResult // Unused variable
+	if err != nil {
+		return "You are not currently playing the game and hence will not be paid!" 
+	}
+
+	// Update the user's balance
+	_, err = userCollection.UpdateOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "balance", Value: amount},
+			}},
+		},
+	)
+	if err != nil {
+		fmt.Printf("Error occurred while updating user's balance! %s\n", err)
+		return "Error occurred while updating user's balance! " + strings.Title(err.Error())
+	}
+	
+	// Success
+	return "You have been paid " + strconv.Itoa(amount) + " coins!"
 }
