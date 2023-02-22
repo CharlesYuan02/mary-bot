@@ -174,6 +174,9 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 						Name: "mary top/leaderboard",
 						Value: "Shows the top 10 users with the highest balance",
 					},{
+						Name: "mary trivia",
+						Value: "Starts a trivia game. Pays 50, 100, or 200 coins upon win depending on the difficulty",
+					},{
 						Name: "mary gamble [amount]",
 						Value: "Gamble the specified amount of coins",
 					},{
