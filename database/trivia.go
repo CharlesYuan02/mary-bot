@@ -124,7 +124,7 @@ func WaitForResponse(session *discordgo.Session, channelID string, authorID stri
 }
 
 // Pay the user for their correct answer
-func PayForCorrectAnswer(session *discordgo.Session, message *discordgo.MessageCreate, difficulty string, mongoURI string, guildID int, userID int) (string) {
+func PayForCorrectAnswer(session *discordgo.Session, message *discordgo.MessageCreate, difficulty string, mongoURI string, guildID int, guildName string, userID int, userName string) (string) {
 	// Calculate the amount of coins to pay the user
 	amount := 0
 	switch strings.ToLower(difficulty) {
@@ -166,7 +166,32 @@ func PayForCorrectAnswer(session *discordgo.Session, message *discordgo.MessageC
 	).DecodeBytes()
 	_ = collectionResult // Unused variable
 	if err != nil {
-		return "You are not currently playing the game and hence will not be paid!" 
+		// If user doesn't exist, create them
+		if err == mongo.ErrNoDocuments {
+			// Insert user into database
+			result, err := userCollection.InsertOne(
+				ctx,
+				bson.D{
+					{Key: "user_id", Value: userID},
+					{Key: "user_name", Value: userName},
+					{Key: "guild_id", Value: guildID},
+					{Key: "guild_name", Value: guildName},
+					{Key: "balance", Value: int64(0)}, // Enter balance as int64 value
+					{Key: "last_daily", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_gamble", Value: time.Now().AddDate(0, 0, -1)},
+				},
+			)
+			if err != nil {
+				fmt.Printf("Error occurred while inserting to database! %s\n", err)
+				return "Error occurred while inserting to database! " + strings.Title(err.Error())
+			}
+			fmt.Printf("Inserted user %s into database with ID %s\n", userName, result.InsertedID)
+		} else {
+			fmt.Printf("Error occurred while selecting from database! %s\n", err)
+			return "Error occurred while selecting from database! " + strings.Title(err.Error())
+		}
 	}
 
 	// Update the user's balance

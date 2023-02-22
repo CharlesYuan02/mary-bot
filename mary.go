@@ -16,16 +16,16 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
+	//"github.com/joho/godotenv"
 )
 
 func main() {
 	// Load token from env vars
-	envErr := godotenv.Load(".env")
-	if envErr != nil {
-		fmt.Printf("Error loading environment variables! %s\n", envErr)
-		return
-	}
+	// envErr := godotenv.Load(".env")
+	// if envErr != nil {
+	// 	fmt.Printf("Error loading environment variables! %s\n", envErr)
+	// 	return
+	// }
 	TOKEN := os.Getenv("TOKEN")
 	if TOKEN == "" {
 		fmt.Println("Token not found!")
@@ -469,7 +469,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				if strings.ToLower(msg) == strings.ToLower(correctAnswer) {
 					session.ChannelMessageSend(message.ChannelID, "Correct!")
 					// Give user coins based on difficulty
-					res := database.PayForCorrectAnswer(session, message, difficulty, MONGO_URI, guildID, userID)
+					res := database.PayForCorrectAnswer(session, message, difficulty, MONGO_URI, guildID, guildName, userID, userName)
 					session.ChannelMessageSend(message.ChannelID, res)
 				} else {
 					session.ChannelMessageSend(message.ChannelID, "Incorrect! The correct answer is " + correctAnswer + ".")
