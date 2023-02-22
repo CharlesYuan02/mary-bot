@@ -451,7 +451,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			session.ChannelMessageSendEmbed(message.ChannelID, embed)
 
 		// mary trivia -> starts a trivia game
-		case command[1] == "trivia":
+		case command[1] == "trivia" || command[1] == "triv" || command[1] == "quiz":
 			err, res, correctAnswer, difficulty := database.Trivia(session, message)
 			if err != "" {
 				session.ChannelMessageSend(message.ChannelID, err)
