@@ -124,16 +124,26 @@ func WaitForResponse(session *discordgo.Session, channelID string, authorID stri
 }
 
 // Pay the user for their correct answer
-func PayForCorrectAnswer(session *discordgo.Session, message *discordgo.MessageCreate, difficulty string, mongoURI string, guildID int, guildName string, userID int, userName string) (string) {
+func PayForCorrectAnswer(session *discordgo.Session, message *discordgo.MessageCreate, difficulty string, mongoURI string, guildID int, guildName string, userID int, userName string, amount int) (string) {
 	// Calculate the amount of coins to pay the user
-	amount := 0
-	switch strings.ToLower(difficulty) {
-	case "easy":
-		amount = 50
-	case "medium":
-		amount = 100
-	case "hard":
-		amount = 200
+	if amount == 0 {
+		switch strings.ToLower(difficulty) {
+		case "easy":
+			amount = 50
+		case "medium":
+			amount = 100
+		case "hard":
+			amount = 200
+		}
+	} else {
+		switch strings.ToLower(difficulty) {
+		case "easy":
+			amount *= 2
+		case "medium":
+			amount *= 3
+		case "hard":
+			amount *= 5
+		}
 	}
 
 	// Connect to MongoDB

@@ -16,16 +16,16 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/bwmarrin/discordgo"
-	//"github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	// Load token from env vars
-	// envErr := godotenv.Load(".env")
-	// if envErr != nil {
-	// 	fmt.Printf("Error loading environment variables! %s\n", envErr)
-	// 	return
-	// }
+	envErr := godotenv.Load(".env")
+	if envErr != nil {
+		fmt.Printf("Error loading environment variables! %s\n", envErr)
+		return
+	}
 	TOKEN := os.Getenv("TOKEN")
 	if TOKEN == "" {
 		fmt.Println("Token not found!")
@@ -142,49 +142,49 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				},
 				Fields: []*discordgo.MessageEmbedField{{
 						Name: "mary help",
-						Value: "Shows all commands",
+						Value: "Shows all commands.",
 					},{
 						Name: "mary test",
-						Value: "Tests if Mary is online",
+						Value: "Tests if Mary is online.",
 					},{
 						Name: "mary test connection",
-						Value: "Tests if Mary can connect to the database",
+						Value: "Tests if Mary can connect to the database.",
 					},{
 						Name: "mary del [amount] (admin only)",
-						Value: "Deletes a set number of messages",
+						Value: "Deletes a set number of messages.",
 					},{
 						Name: "mary bankrupt @user (admin only)",
-						Value: "Reduces the user's balance to 0",
+						Value: "Reduces the user's balance to 0.",
 					},{
 						Name: "mary quote",
-						Value: "Shows a random quote",
+						Value: "Shows a random quote.",
 					},{
 						Name: "mary profile [optional: @user]",
-						Value: "Shows your profile or a specified user's profile",
+						Value: "Shows your profile or a specified user's profile.",
 					},{
 						Name: "mary bal [optional: @user]",
-						Value: "Shows your balance or a specified user's balance",
+						Value: "Shows your balance or a specified user's balance.",
 					},{
 						Name: "mary daily",
-						Value: "Gives you 100 coins",
+						Value: "Gives you 100 coins.",
 					},{
 						Name: "mary pay/give @user [amount]",
-						Value: "Pays the mentioned user the specified amount of coins",
+						Value: "Pays the mentioned user the specified amount of coins.",
 					},{
 						Name: "mary top/leaderboard",
-						Value: "Shows the top 10 users with the highest balance",
+						Value: "Shows the top 10 users with the highest balance.",
 					},{
-						Name: "mary trivia",
-						Value: "Starts a trivia game. Pays 50, 100, or 200 coins upon win depending on the difficulty",
+						Name: "mary trivia [optional: amount]",
+						Value: "Starts a trivia game. Pays 50, 100, or 200 coins upon win depending on the difficulty. You can also gamble for 2X, 3X, 5X your bet.",
 					},{
 						Name: "mary gamble [amount]",
-						Value: "Gamble the specified amount of coins",
+						Value: "Gamble the specified amount of coins.",
 					},{
 						Name: "mary lottery [amount]",
-						Value: "Enter the lottery with 100 coins",
+						Value: "Enter the lottery with 100 coins.",
 					},{
 						Name: "mary slots [amount]",
-						Value: "Play slots with 10 coins",
+						Value: "Play slots with 10 coins.",
 					},
 				},
 			}
@@ -452,6 +452,22 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 
 		// mary trivia -> starts a trivia game
 		case command[1] == "trivia" || command[1] == "triv" || command[1] == "quiz":
+			gambleAmount := 0
+			if len(command) == 3 {
+				// Check if user specified a valid amount to gamble
+				if valid.IsInt(command[2]) == false {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a valid amount to gamble!")
+					return
+				} else {
+					res, err := strconv.Atoi(command[2])
+					if err != nil {
+						fmt.Printf("Error converting gamble amount! %s\n", err)
+					}
+					gambleAmount = res
+					session.ChannelMessageSend(message.ChannelID, "Gambling " + command[2] + " coins. Loading question...")
+					time.Sleep(1 * time.Second)
+				}
+			}
 			err, res, correctAnswer, difficulty := database.Trivia(session, message)
 			if err != "" {
 				session.ChannelMessageSend(message.ChannelID, err)
@@ -472,12 +488,22 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				if strings.ToLower(msg) == strings.ToLower(correctAnswer) {
 					session.ChannelMessageSend(message.ChannelID, "Correct!")
 					// Give user coins based on difficulty
-					res := database.PayForCorrectAnswer(session, message, difficulty, MONGO_URI, guildID, guildName, userID, userName)
+					// If the user gambled coins, pay them differently 
+					res := ""
+					if gambleAmount != 0 {
+						res = database.PayForCorrectAnswer(session, message, difficulty, MONGO_URI, guildID, guildName, userID, userName, gambleAmount)
+					} else {
+						res = database.PayForCorrectAnswer(session, message, difficulty, MONGO_URI, guildID, guildName, userID, userName, 0)
+					}
 					session.ChannelMessageSend(message.ChannelID, res)
 				} else {
 					session.ChannelMessageSend(message.ChannelID, "Incorrect! The correct answer is " + correctAnswer + ".")
+					// If the user gambled coins, take them away
+					if gambleAmount != 0 {
+						session.ChannelMessageSend(message.ChannelID, "<@" + strconv.Itoa(userID) + ">, you lose. -" + command[2] + " coins.")
 				}
 			}
+		}
 
 		// mary gamble amount -> gamble amount of coins
 		case command[1] == "gamble":
