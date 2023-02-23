@@ -14,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options" 
 	"go.mongodb.org/mongo-driver/bson"
+	commands "mary-bot/commands"
 )
 
 // TriviaQuestion represents a single trivia question from the API
@@ -28,11 +29,65 @@ type TriviaQuestion struct {
 
 
 // Trivia is a function that starts a trivia game session
-func Trivia(session *discordgo.Session, message *discordgo.MessageCreate) (string, *discordgo.MessageEmbed, string, string) {
+func Trivia(session *discordgo.Session, message *discordgo.MessageCreate, mongoURI string, guildID int, guildName string, userID int, userName string) (string, *discordgo.MessageEmbed, string, string) {
+	// Check if the user is still on cooldown
+	err1, userCollection := ConnectToDatabase(mongoURI, guildID, guildName, userID, userName)
+	if err1 != "" {
+		return "Error occurred while connecting to database! " + strings.Title(err1), nil, "", ""
+	}
+
+	// Connect to MongoDB
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
+	if err != nil {
+		return "Error occurred creating MongoDB client! " + strings.Title(err.Error()), nil, "", ""
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // Timeout for connection is 10 secs
+	defer cancel()
+	err = client.Connect(ctx)
+	if err != nil {
+		return "Error occurred while connecting to database! " + strings.Title(err.Error()), nil, "", ""
+	}
+	defer client.Disconnect(ctx) 
+
+	// Get the user's document
+	serverDatabase := client.Database(strconv.Itoa(guildID))
+	userCollection = serverDatabase.Collection("Users")
+	collectionResult, err := userCollection.FindOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+	).DecodeBytes()
+	if err != nil {
+		return "Error occurred while selecting from database! " + strings.Title(err.Error()), nil, "", ""
+	}
+
+	// Get user
+	lastTrivia := collectionResult.Lookup("last_trivia").DateTime()
+	// Wait 5 seconds before playing trivia again
+	if time.Now().Unix() - lastTrivia/1000 < 5 && commands.IsOwner(userID) == false{
+		return "<@" + strconv.Itoa(userID) + ">, you must wait 3 seconds before playing trivia again!", nil, "", ""
+	}
+
+	// If the user is not on cooldown, set the last_trivia field to now
+	_, err = userCollection.UpdateOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$set", Value: bson.D{
+				{Key: "last_trivia", Value: time.Now()},
+			}},
+		},
+	)
+
 	// Make a request to the trivia API
 	resp, err := http.Get("https://opentdb.com/api.php?amount=1&type=multiple")
 	if err != nil {
-		return "Failed to get trivia question!", nil, "", ""
+		return "Failed to get trivia question!" + strings.Title(err.Error()), nil, "", ""
 	}
 	defer resp.Body.Close()
 
@@ -43,11 +98,11 @@ func Trivia(session *discordgo.Session, message *discordgo.MessageCreate) (strin
 	}
 	err = json.NewDecoder(resp.Body).Decode(&triviaResponse)
 	if err != nil {
-		return "Failed to parse trivia question!", nil, "", ""
+		return "Failed to parse trivia question!" + strings.Title(err.Error()), nil, "", ""
 	}
 
 	if triviaResponse.ResponseCode != 0 || len(triviaResponse.Results) == 0 {
-		return "Failed to get trivia question!", nil, "", ""
+		return "Failed to get trivia question!" + strings.Title(err.Error()), nil, "", ""
 	}
 
 	// Select the first question from the response and shuffle the answer choices
@@ -190,17 +245,40 @@ func PayForCorrectAnswer(session *discordgo.Session, message *discordgo.MessageC
 // Check if the user has enough coins to gamble
 // Also check if the user is playing the game
 func CheckBalance(session *discordgo.Session, message *discordgo.MessageCreate, mongoURI string, guildID int, guildName string, userID int, userName string, amount int) (string) {
+	err, userCollection := ConnectToDatabase(mongoURI, guildID, guildName, userID, userName)
+	if err != "" {
+		return err
+	}
+	// Find user
+	collectionResult, err2 := userCollection.FindOne(context.Background(), bson.D{
+		{Key: "user_id", Value: userID},
+		{Key: "guild_id", Value: guildID},
+	}).DecodeBytes() 
+	if err2 != nil {
+		return "Error occurred while finding user! " + strings.Title(err2.Error())
+	}
+
+	// Check if user has enough to gamble
+	userBalance := collectionResult.Lookup("balance").Int64()
+	if userBalance < int64(amount) {
+		return "<@" + strconv.Itoa(userID) + ">, you don't have enough coins to gamble that much!"
+	}
+	// Success
+	return ""
+}
+
+func ConnectToDatabase(mongoURI string, guildID int, guildName string, userID int, userName string) (string, *mongo.Collection) {
 	// Connect to MongoDB
 	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
 	if err != nil {
-		return "Error occurred creating MongoDB client! " + strings.Title(err.Error())
+		return "Error occurred creating MongoDB client! " + strings.Title(err.Error()), nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // Timeout for connection is 10 secs
 	defer cancel() // Fix for memory leak
 	err = client.Connect(ctx)
 	if err != nil {
-		return "Error occurred while connecting to database! " + strings.Title(err.Error())
+		return "Error occurred while connecting to database! " + strings.Title(err.Error()), nil
 	}
 
 	// Disconnect from database
@@ -235,25 +313,19 @@ func CheckBalance(session *discordgo.Session, message *discordgo.MessageCreate, 
 					{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_gamble", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_trivia", Value: time.Now().AddDate(0, 0, -1)},
 				},
 			)
 			if err != nil {
 				fmt.Printf("Error occurred while inserting to database! %s\n", err)
-				return "Error occurred while inserting to database! " + strings.Title(err.Error())
+				return "Error occurred while inserting to database! " + strings.Title(err.Error()), nil
 			}
 			fmt.Printf("Inserted user %s into database with ID %s\n", userName, result.InsertedID)
 		} else {
 			fmt.Printf("Error occurred while selecting from database! %s\n", err)
-			return "Error occurred while selecting from database! " + strings.Title(err.Error())
+			return "Error occurred while selecting from database! " + strings.Title(err.Error()), nil
 		}
 	}
-
-	// Check if user has enough to gamble
-	userBalance := collectionResult.Lookup("balance").Int64()
-	if userBalance < int64(amount) {
-		return "<@" + strconv.Itoa(userID) + ">, you don't have enough coins to gamble that much!"
-	}
-
 	// Success
-	return ""
+	return "", userCollection
 }

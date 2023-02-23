@@ -62,6 +62,7 @@ func GetProfile(mongoURI string, guildID int, guildName string, userID int, user
 					{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_gamble", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_trivia", Value: time.Now().AddDate(0, 0, -1)},
 				},
 			)
 			if err != nil {
@@ -267,6 +268,7 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 					{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_gamble", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_trivia", Value: time.Now().AddDate(0, 0, -1)},
 				},
 			)
 			if err != nil {
@@ -327,6 +329,7 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 						{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
 						{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
 						{Key: "last_gamble", Value: time.Now().AddDate(0, 0, -1)},
+						{Key: "last_trivia", Value: time.Now().AddDate(0, 0, -1)},
 					}},
 				},
 				opts,
