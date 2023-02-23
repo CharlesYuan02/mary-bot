@@ -162,6 +162,51 @@ func PayForCorrectAnswer(session *discordgo.Session, message *discordgo.MessageC
 	// Disconnect from database
 	defer client.Disconnect(ctx) // Occurs as last line of main() function
 
+	// Get the correct database and collection
+	serverDatabase := client.Database(strconv.Itoa(guildID))
+	userCollection := serverDatabase.Collection("Users")
+
+	// Update the user's balance
+	_, err = userCollection.UpdateOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "balance", Value: amount},
+			}},
+		},
+	)
+	if err != nil {
+		fmt.Printf("Error occurred while updating user's balance! %s\n", err)
+		return "Error occurred while updating user's balance! " + strings.Title(err.Error())
+	}
+	
+	// Success
+	return "You have been paid " + strconv.Itoa(amount) + " coins!"
+}
+
+// Check if the user has enough coins to gamble
+// Also check if the user is playing the game
+func CheckBalance(session *discordgo.Session, message *discordgo.MessageCreate, mongoURI string, guildID int, guildName string, userID int, userName string, amount int) (string) {
+	// Connect to MongoDB
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
+	if err != nil {
+		return "Error occurred creating MongoDB client! " + strings.Title(err.Error())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // Timeout for connection is 10 secs
+	defer cancel() // Fix for memory leak
+	err = client.Connect(ctx)
+	if err != nil {
+		return "Error occurred while connecting to database! " + strings.Title(err.Error())
+	}
+
+	// Disconnect from database
+	defer client.Disconnect(ctx) // Occurs as last line of main() function
+
 	// If database for server doesn't exist, create it
 	serverDatabase := client.Database(strconv.Itoa(guildID))
 	userCollection := serverDatabase.Collection("Users")
@@ -204,24 +249,12 @@ func PayForCorrectAnswer(session *discordgo.Session, message *discordgo.MessageC
 		}
 	}
 
-	// Update the user's balance
-	_, err = userCollection.UpdateOne(
-		ctx,
-		bson.D{
-			{Key: "user_id", Value: userID},
-			{Key: "guild_id", Value: guildID},
-		},
-		bson.D{
-			{Key: "$inc", Value: bson.D{
-				{Key: "balance", Value: amount},
-			}},
-		},
-	)
-	if err != nil {
-		fmt.Printf("Error occurred while updating user's balance! %s\n", err)
-		return "Error occurred while updating user's balance! " + strings.Title(err.Error())
+	// Check if user has enough to gamble
+	userBalance := collectionResult.Lookup("balance").Int64()
+	if userBalance < int64(amount) {
+		return "<@" + strconv.Itoa(userID) + ">, you don't have enough coins to gamble that much!"
 	}
-	
+
 	// Success
-	return "You have been paid " + strconv.Itoa(amount) + " coins!"
+	return ""
 }
