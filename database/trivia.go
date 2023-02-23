@@ -67,7 +67,7 @@ func Trivia(session *discordgo.Session, message *discordgo.MessageCreate, mongoU
 	lastTrivia := collectionResult.Lookup("last_trivia").DateTime()
 	// Wait 5 seconds before playing trivia again
 	if time.Now().Unix() - lastTrivia/1000 < 5 && commands.IsOwner(userID) == false{
-		return "<@" + strconv.Itoa(userID) + ">, you must wait 3 seconds before playing trivia again!", nil, "", ""
+		return "<@" + strconv.Itoa(userID) + ">, you must wait 5 seconds before playing trivia again!", nil, "", ""
 	}
 
 	// If the user is not on cooldown, set the last_trivia field to now
