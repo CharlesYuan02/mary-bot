@@ -183,9 +183,8 @@ func PayForCorrectAnswer(session *discordgo.Session, message *discordgo.MessageC
 		fmt.Printf("Error occurred while updating user's balance! %s\n", err)
 		return "Error occurred while updating user's balance! " + strings.Title(err.Error())
 	}
-	
 	// Success
-	return "You have been paid " + strconv.Itoa(amount) + " coins!"
+	return "<@" + strconv.Itoa(userID) + ">, you have been paid " + strconv.Itoa(amount) + " coins!"
 }
 
 // Check if the user has enough coins to gamble
