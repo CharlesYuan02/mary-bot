@@ -16,16 +16,16 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/bwmarrin/discordgo"
-	//"github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	// Load token from env vars
-	// envErr := godotenv.Load(".env")
-	// if envErr != nil {
-	// 	fmt.Printf("Error loading environment variables! %s\n", envErr)
-	// 	return
-	// }
+	envErr := godotenv.Load(".env")
+	if envErr != nil {
+		fmt.Printf("Error loading environment variables! %s\n", envErr)
+		return
+	}
 	TOKEN := os.Getenv("TOKEN")
 	if TOKEN == "" {
 		fmt.Println("Token not found!")
@@ -467,14 +467,15 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 					session.ChannelMessageSend(message.ChannelID, "Gambling " + command[2] + " coins. Checking balance...")
 					time.Sleep(1 * time.Second)
 				}
-
-				// Check if user has enough coins to gamble
-				res := database.CheckBalance(session, message, MONGO_URI, guildID, guildName, userID, userName, gambleAmount)
-				if res != "" {
-					session.ChannelMessageSend(message.ChannelID, res)
-					return
-				}
 			}
+			// Check if user has enough coins to gamble
+			// The reason we check it here is so that if the user hasn't been added to the database yet, they will be added
+			res1 := database.CheckBalance(session, message, MONGO_URI, guildID, guildName, userID, userName, gambleAmount)
+			if res1 != "" {
+				session.ChannelMessageSend(message.ChannelID, res1)
+				return
+			}
+
 			err, res, correctAnswer, difficulty := database.Trivia(session, message, MONGO_URI, guildID, guildName, userID, userName)
 			if err != "" {
 				session.ChannelMessageSend(message.ChannelID, err)
