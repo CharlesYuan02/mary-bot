@@ -24,7 +24,7 @@ func rob(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 	userResult, err := userCollection.FindOne(
 		ctx,
 		bson.D{
-			{Key: "user_id", Value: userID},
+			{Key: "user_id", Value: pingedUserID},
 			{Key: "guild_id", Value: guildID},
 		},
 	).DecodeBytes()
@@ -53,7 +53,7 @@ func rob(ctx context.Context, userCollection *mongo.Collection, guildID int, use
 	userCollection.FindOneAndUpdate(
 		ctx,
 		bson.D{
-			{Key: "user_id", Value: userID},
+			{Key: "user_id", Value: pingedUserID},
 			{Key: "guild_id", Value: guildID},
 		},
 		bson.D{
@@ -187,6 +187,7 @@ func UserInteraction(mongoURI string, guildID int, guildName string, userID int,
 					{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
 					{Key: "last_gamble", Value: time.Now().AddDate(0, 0, -1)},
+					{Key: "last_trivia", Value: time.Now().AddDate(0, 0, -1)},
 				},
 			)
 			if err != nil {
