@@ -108,11 +108,11 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 		switch true {
 		
 		// mary test
-		case command[1] == "test" && len(command) == 2:
+		case strings.ToLower(command[1]) == "test" && len(command) == 2:
 			session.ChannelMessageSend(message.ChannelID, "Test successful!")
 		
 		// mary test connection -> checks if mongoDB connection is working
-		case command[1] == "test" && command[2] == "connection":
+		case strings.ToLower(command[1]) == "test" && strings.ToLower(command[2]) == "connection":
 			dbErr := database.TestConnection(MONGO_URI)
 			if dbErr != "" {
 				session.ChannelMessageSend(message.ChannelID, dbErr)
@@ -121,7 +121,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			}
 
 		// mary help -> shows all commands
-		case command[1] == "help":
+		case strings.ToLower(command[1]) == "help":
 			// Get Mary's avatar
 			mary, err := discordgo.New("Bot " + os.Getenv("TOKEN"))
 			if err != nil {
@@ -165,6 +165,9 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 						Name: "mary bal [optional: @user]",
 						Value: "Shows your balance or a specified user's balance.",
 					},{
+						Name: "mary shop [optional: page number]",
+						Value: "Shows the shop. You can also specify a page number.",
+					},{
 						Name: "mary daily",
 						Value: "Gives you 100 coins.",
 					},{
@@ -192,7 +195,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			session.ChannelMessageSendEmbed(message.ChannelID, embed)
 		
 		// mary profile -> shows your profile
-		case command[1] == "profile":
+		case strings.ToLower(command[1]) == "profile":
 			// Declare variables so that they can be used outside of the if statement
 			// Because apparently declaring variables inside an if statement limits their scope to the conditional
 			var user string
@@ -279,7 +282,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			session.ChannelMessageSendEmbed(message.ChannelID, embed)
 
 		// mary del (admin only) -> deletes a set number of messages
-		case command[1] == "del" && len(command) == 3:
+		case strings.ToLower(command[1]) == "del" && len(command) == 3:
 			// Check if third argument is an integer
 			_, err := strconv.Atoi(command[2])
 			if err != nil {
@@ -302,7 +305,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			}
 		
 		// mary bankrupt (admin only) -> reduces the user's balance to 0 
-		case command[1] == "bankrupt":
+		case strings.ToLower(command[1]) == "bankrupt":
 			if len(command) == 3 {
 				pingedUserID := strings.Trim(command[2], "<@!>")
 				pingedUser, err := strconv.Atoi(pingedUserID)
@@ -316,7 +319,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			}
 		
 		// mary quote -> shows a random quote
-		case command[1] == "quote":
+		case strings.ToLower(command[1]) == "quote":
 			quote, err := http.Get("https://api.quotable.io/random")
 			if err != nil {
 				session.ChannelMessageSend(message.ChannelID, "Error retrieving quote!")
@@ -333,7 +336,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			}
 		
 		// mary bal -> checks balance of message author
-		case command[1] == "bal":
+		case strings.ToLower(command[1]) == "bal":
 			// Return balance of user
 			if len(command) == 2 {
 				res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "bal", 0)
@@ -359,7 +362,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			}
 
 		// mary shop -> shows shop
-		case command[1] == "shop":
+		case strings.ToLower(command[1]) == "shop":
 			pageSize := 3
 
 			// If the user does not declare a page number, default to page 1 (0)
@@ -381,17 +384,17 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			}
 
 		// mary daily -> gives user 100 coins
-		case command[1] == "daily":
+		case strings.ToLower(command[1]) == "daily":
 			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "daily", 100)
 			session.ChannelMessageSend(message.ChannelID, res)
 		
 		// mary beg -> gives user 1-10 coins
-		case command[1] == "beg":
+		case strings.ToLower(command[1]) == "beg":
 			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "beg", 0)
 			session.ChannelMessageSend(message.ChannelID, res)
 
 		// mary rob @user -> steals 1-50 coins from user
-		case command[1] == "rob":
+		case strings.ToLower(command[1]) == "rob":
 			pingedUserID := strings.Trim(command[2], "<@!>")
 			pingedUser, err := strconv.Atoi(pingedUserID)
 			if err != nil {
@@ -401,7 +404,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			session.ChannelMessageSend(message.ChannelID, res)
 
 		// mary pay/give @user amount -> gives user amount of coins
-		case command[1] == "pay" || command[1] == "give":
+		case strings.ToLower(command[1]) == "pay" || strings.ToLower(command[1]) == "give":
 			if len(command) == 3 {
 				session.ChannelMessageSend(message.ChannelID, "Please specify an amount to be paid!")
 				return
@@ -425,7 +428,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			session.ChannelMessageSend(message.ChannelID, res)
 
 		// mary top/leaderboard -> shows users with the most coins in descending order
-		case command[1] == "leaderboard" || command[1] == "top":
+		case strings.ToLower(command[1]) == "leaderboard" || strings.ToLower(command[1]) == "top":
 			err, res := database.Leaderboard(MONGO_URI, guildID)
 			if err != "" { // Different error than usual
 				session.ChannelMessageSend(message.ChannelID, err)
@@ -473,7 +476,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			session.ChannelMessageSendEmbed(message.ChannelID, embed)
 
 		// mary trivia -> starts a trivia game
-		case command[1] == "trivia" || command[1] == "triv" || command[1] == "quiz":
+		case strings.ToLower(command[1]) == "trivia" || strings.ToLower(command[1]) == "triv" || strings.ToLower(command[1]) == "quiz":
 			gambleAmount := 0
 			if len(command) == 3 {
 				// Check if user specified a valid amount to gamble
@@ -536,7 +539,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 		}
 
 		// mary gamble amount -> gamble amount of coins
-		case command[1] == "gamble":
+		case strings.ToLower(command[1]) == "gamble":
 			if len(command) == 2 {
 				session.ChannelMessageSend(message.ChannelID, "Please specify an amount to be gambled!")
 				return
@@ -558,7 +561,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			session.ChannelMessageSend(message.ChannelID, res)
 
 		// mary lottery -> enter lottery for 100 coins
-		case command[1] == "lottery":
+		case strings.ToLower(command[1]) == "lottery":
 			if len(command) > 2 {
 				session.ChannelMessageSend(message.ChannelID, "You can only spend 100 coins on the lottery!")
 				time.Sleep(500 * time.Millisecond)
@@ -572,7 +575,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			session.ChannelMessageSend(message.ChannelID, res)
 
 		// mary slots -> play slots for 10 coins
-		case command[1] == "slots":
+		case strings.ToLower(command[1]) == "slots":
 			if len(command) > 2 {
 				session.ChannelMessageSend(message.ChannelID, "You can only spend 10 coins on slots!")
 				time.Sleep(500 * time.Millisecond)
@@ -587,7 +590,6 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 
 		// Everything else (will most likely return "I'm sorry, I dont recognize that command.")
 		default:
-			fmt.Printf("%T\n", command[1])
 			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, command[1], 0)
 			session.ChannelMessageSend(message.ChannelID, res)
 		}
