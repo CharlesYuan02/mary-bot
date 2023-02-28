@@ -16,16 +16,16 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/bwmarrin/discordgo"
-	//"github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	// Load token from env vars
-	// envErr := godotenv.Load(".env")
-	// if envErr != nil {
-	// 	fmt.Printf("Error loading environment variables! %s\n", envErr)
-	// 	return
-	// }
+	envErr := godotenv.Load(".env")
+	if envErr != nil {
+		fmt.Printf("Error loading environment variables! %s\n", envErr)
+		return
+	}
 	TOKEN := os.Getenv("TOKEN")
 	if TOKEN == "" {
 		fmt.Println("Token not found!")
@@ -356,6 +356,28 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				}
 			} else {
 				session.ChannelMessageSend(message.ChannelID, "Error retrieving balance!")
+			}
+
+		// mary shop -> shows shop
+		case command[1] == "shop":
+			pageSize := 3
+
+			// If the user does not declare a page number, default to page 1 (0)
+			if len(command) == 2 {
+				database.Shop(session, message, pageSize, 0)
+			} else if len(command) == 3 {
+				// Check if third argument is an integer
+				_, err := strconv.Atoi(command[2])
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Please enter a valid number!")
+				} else {
+					// Get page number
+					page, err := strconv.Atoi(command[2])
+					if err != nil {
+						session.ChannelMessageSend(message.ChannelID, "Error occurred while converting page number!" + strings.Title(err.Error()))
+					}
+					database.Shop(session, message, pageSize, page-1)
+				}
 			}
 
 		// mary daily -> gives user 100 coins

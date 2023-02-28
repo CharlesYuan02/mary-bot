@@ -2,31 +2,46 @@ package database
 
 import (
 	"fmt"
-	"math/rand"
-	"strconv"
-	"strings"
-	"time"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options" 
-	"go.mongodb.org/mongo-driver/bson"
+	//"strconv"
+	//"strings"
+	"sort"
+	// "go.mongodb.org/mongo-driver/mongo"
+	// "go.mongodb.org/mongo-driver/mongo/options" 
+	// "go.mongodb.org/mongo-driver/bson"
 	"github.com/bwmarrin/discordgo"
 )
 
-func Shop(session *discordgo.Session, message *discordgo.MessageCreate) {
-    // Define the items for sale
-    items := []ShopItem{
-        {"item1", 100, "This is the first item"},
-        {"item2", 200, "This is the second item"},
-        {"item3", 300, "This is the third item"},
-        {"item4", 400, "This is the fourth item"},
-        {"item5", 500, "This is the fifth item"},
+type ShopItem struct {
+    Name        string
+    Price       int
+    Description string
+}
+
+// No return value because we are using the session to add reactions to the message
+func Shop(session *discordgo.Session, message *discordgo.MessageCreate, pageSize int, currentPage int) {
+	// Define the items for sale
+	items := []ShopItem{
+        {"🔫 Gun", 500, "It's a gun... what do you expect?"},
+        {"🚗 Car", 10000, "Run people over with this car!"},
+        {"🍫 Chocolate", 50, "A great gift to give to a friend... or enemy."},
+        {"💍 Ring", 1000, "Congratulations! Who's the lucky person?"},
+        {"🏹 Bow", 400, "You should probably learn how to use this first..."},
     }
 
-    // Define the page size and current page
-    pageSize := 2
-    currentPage := 0
+	// Sort items by price
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Price < items[j].Price
+	})
+
+	// Check if the currentPage is out of bounds
+	if currentPage < 0 {
+		currentPage = 0
+	} else if currentPage > len(items)/pageSize {
+		currentPage = len(items) / pageSize
+	}
 
     // Create a function to get the items for the current page
+	// Make sure it displays the correct number of items and doesn't go out of bounds
     getPageItems := func() []ShopItem {
         start := currentPage * pageSize
         end := start + pageSize
@@ -36,92 +51,32 @@ func Shop(session *discordgo.Session, message *discordgo.MessageCreate) {
         return items[start:end]
     }
 
-    // Create a function to display the current page
-    displayPage := func(m *discordgo.Message) {
-        // Get the items for the current page
-        pageItems := getPageItems()
-
-        // Create the embed
-        embed := &discordgo.MessageEmbed{
-            Title: "Shop",
-            Color: 0x00ff00,
-            Fields: []*discordgo.MessageEmbedField{
-                {Name: "Items", Value: formatItems(pageItems), Inline: false},
-            },
-        }
-
-        // Add the page information to the footer
-        embed.Footer = &discordgo.MessageEmbedFooter{
-            Text: fmt.Sprintf("Page %d/%d", currentPage+1, numPages(len(items), pageSize)),
-        }
-
-        // Update the message with the new embed
-        _, err := session.ChannelMessageEditEmbed(m.ChannelID, m.ID, embed)
-        if err != nil {
-            fmt.Println(err)
-        }
-    }
-
-    // Create a function to handle reactions
-    reactionHandler := func(m *discordgo.MessageReactionAdd) {
-        // Ignore reactions from the bot
-        if m.UserID == session.State.User.ID {
-            return
-        }
-
-        // Only respond to reactions on the shop message
-        if m.MessageID != message.ID {
-            return
-        }
-
-        // Check if the reaction is a navigation reaction
-        switch m.Emoji.Name {
-        case "⬅️":
-            if currentPage > 0 {
-                currentPage--
-                displayPage(message)
-            }
-        case "➡️":
-            if currentPage < numPages(len(items), pageSize)-1 {
-                currentPage++
-                displayPage(message)
-            }
-        }
-    }
-
-    // Send the initial shop message
+	// Create the embed
     embed := &discordgo.MessageEmbed{
         Title: "Shop",
-        Color: 0x00ff00,
-        Fields: []*discordgo.MessageEmbedField{
-            {Name: "Items", Value: formatItems(getPageItems()), Inline: false},
-        },
+        Color: 0xffc0cb,
         Footer: &discordgo.MessageEmbedFooter{
-            Text: fmt.Sprintf("Page %d/%d", currentPage+1, numPages(len(items), pageSize)),
+            Text: fmt.Sprintf("Page %d of %d", currentPage+1, len(items)/pageSize+1),
         },
     }
-    m, err := session.ChannelMessageSendEmbed(message.ChannelID, embed)
-    if err != nil {
-        fmt.Println(err)
-        return
+
+    // Add the items to the embed
+    // Add a field for each item on the page
+	pageItems := getPageItems()
+    for i := range pageItems {
+        item := pageItems[i]
+        field := &discordgo.MessageEmbedField{
+            Name: fmt.Sprintf("%s", item.Name),
+			Value: fmt.Sprintf("Price: %d coins\n%s", item.Price, item.Description),
+            Inline: false,
+        }
+        embed.Fields = append(embed.Fields, field)
     }
 
-    // Add the navigation reactions to the shop message
-    err = session.MessageReactionAdd(m.ChannelID, m.ID, "⬅️")
-    if err != nil {
-        fmt.Println(err)
-    }
-    err = session.MessageReactionAdd(m.ChannelID, m.ID, "➡️")
+	// Send the embed
+	_, err := session.ChannelMessageSendEmbed(message.ChannelID, embed)
 	if err != nil {
-		fmt.Println(err)
+		return
 	}
-
-	// Add the reaction handler to the session
-	session.AddHandler(reactionHandler)
-	
-	// Wait for 30 seconds
-	time.Sleep(30 * time.Second)
-
-	// Remove the reaction handler from the session
-	session.RemoveHandler(reactionHandler)
 }
+
