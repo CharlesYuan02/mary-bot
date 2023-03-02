@@ -168,6 +168,9 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 						Name: "mary shop [optional: page number]",
 						Value: "Shows the shop. You can also specify a page number.",
 					},{
+						Name: "mary buy [item name] [amount]",
+						Value: "Buys the specified item.",
+					},{
 						Name: "mary daily",
 						Value: "Gives you 100 coins.",
 					},{
@@ -381,6 +384,26 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 					}
 					database.Shop(session, message, pageSize, page-1)
 				}
+			}
+		
+		// mary buy -> buys an item from the shop
+		case strings.ToLower(command[1]) == "buy":
+			words := strings.Fields(message.Content)
+			lastWord := words[len(words)-1] // Check if amount specified is an integer (should be last argument)
+			if num, err := strconv.Atoi(lastWord); err == nil {
+				// If the last word is an integer, assume the user wants to buy that many of the item
+				// Get item name
+				item := strings.Join(command[2:len(command)-1], " ") // 0 is mary, 1 is buy
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Error occurred while converting item number!" + strings.Title(err.Error()))
+				}
+				res := database.Buy(MONGO_URI, guildID, guildName, userID, userName, strings.ToLower(item), num)
+				session.ChannelMessageSend(message.ChannelID, res)
+			} else {
+				// Get item name -> assume user wants to buy 1 of the item and the rest of the command is the item name
+				item := strings.Join(command[2:], " ")
+				res := database.Buy(MONGO_URI, guildID, guildName, userID, userName, strings.ToLower(item), 1)
+				session.ChannelMessageSend(message.ChannelID, res)
 			}
 
 		// mary daily -> gives user 100 coins

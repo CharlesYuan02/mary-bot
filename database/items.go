@@ -1,13 +1,16 @@
 package database
 
 import (
+	"context"
 	"fmt"
-	//"strconv"
-	//"strings"
+	"strconv"
 	"sort"
-	// "go.mongodb.org/mongo-driver/mongo"
-	// "go.mongodb.org/mongo-driver/mongo/options" 
-	// "go.mongodb.org/mongo-driver/bson"
+	"strings"
+	"regexp" // For removing emojis
+	"time"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/bson"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -17,17 +20,17 @@ type ShopItem struct {
     Description string
 }
 
+// Define the items for sale
+var items = []ShopItem{ // Global variables don't use :=, they use =
+	{"🔫 Gun", 500, "It's a gun... what do you expect?"},
+	{"🚗 Car", 10000, "Run people over with this car!"},
+	{"🍫 Chocolate", 50, "A great gift to give to a friend... or enemy."},
+	{"💍 Ring", 1000, "Congratulations! Who's the lucky person?"},
+	{"🏹 Bow", 400, "You should probably learn how to use this first..."},
+}
+
 // No return value because we are using the session to add reactions to the message
 func Shop(session *discordgo.Session, message *discordgo.MessageCreate, pageSize int, currentPage int) {
-	// Define the items for sale
-	items := []ShopItem{
-        {"🔫 Gun", 500, "It's a gun... what do you expect?"},
-        {"🚗 Car", 10000, "Run people over with this car!"},
-        {"🍫 Chocolate", 50, "A great gift to give to a friend... or enemy."},
-        {"💍 Ring", 1000, "Congratulations! Who's the lucky person?"},
-        {"🏹 Bow", 400, "You should probably learn how to use this first..."},
-    }
-
 	// Sort items by price
 	sort.Slice(items, func(i, j int) bool {
 		return items[i].Price < items[j].Price
@@ -78,4 +81,150 @@ func Shop(session *discordgo.Session, message *discordgo.MessageCreate, pageSize
 	if err != nil {
 		return
 	}
+}
+
+func Buy(mongoURI string, guildID int, guildName string, userID int, userName string, item string, amount int) (string) {
+	// Connect to MongoDB
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
+	if err != nil {
+		fmt.Printf("Error occurred creating MongoDB client! %s\n", err)
+		return "Error occurred creating MongoDB client! " + strings.Title(err.Error())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // Timeout for connection is 10 secs
+	defer cancel() // Fix for memory leak
+	err = client.Connect(ctx)
+	if err != nil {
+		fmt.Printf("Error occurred while connecting to database! %s\n", err)
+		return "Error occurred while connecting to database! " + strings.Title(err.Error())
+	}
+
+	// Disconnect from database
+	defer client.Disconnect(ctx) // Occurs as last line of main() function
+
+	// Check if user exists in database
+	res := IsPlaying(ctx, client, guildID, guildName, userID, userName)
+	if res != "" {
+		return res
+	}
+
+	// If database for server doesn't exist, create it
+	serverDatabase := client.Database(strconv.Itoa(guildID))
+	userCollection := serverDatabase.Collection("Users")
+
+	// Get user from database
+	collectionResult, err := userCollection.FindOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+	).DecodeBytes()
+	if err != nil {
+		fmt.Printf("Error occurred while selecting from database! %s\n", err)
+		return "Error occurred while selecting from database! " + strings.Title(err.Error())
+	}
+
+	// Get user balance
+	balance, err := collectionResult.LookupErr("balance")
+	if err != nil {
+		fmt.Printf("Error occurred while getting user balance! %s\n", err)
+		return "Error occurred while getting user balance! " + strings.Title(err.Error())
+	}
+
+	// Get price of item specified from items
+	itemPrice := 0
+	for i := range items {
+		// Ignore the first character of the item name because it is a unicode emoji
+		// Second character is a space
+		pattern := regexp.MustCompile(`^\p{So}|\s`)
+		if strings.ToLower(pattern.ReplaceAllString(items[i].Name, "")) == item {
+			itemPrice = items[i].Price
+			break
+		}
+	}
+
+	// Check if item exists
+	if itemPrice == 0 {
+		return "That item doesn't exist!"
+	}
+
+	// Check if user has enough money
+	if balance.Int64() < int64(itemPrice) * int64(amount) {
+		return "You don't have enough money to buy this item!"
+	}
+
+	// Otherwise, let the user buy the item
+	// Update user balance
+	_, err = userCollection.UpdateOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$set", Value: bson.D{
+				{Key: "balance", Value: balance.Int64() - int64(itemPrice) * int64(amount)},
+			}},
+		},
+	)
+	if err != nil {
+		fmt.Printf("Error occurred while updating database! %s\n", err)
+		return "Error occurred while updating database! " + strings.Title(err.Error())
+	}
+
+	// Check if the user already has this item in their inventory (in which case we +1)
+	// Otherwise, we add the item to their inventory
+	_, err = userCollection.UpdateOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+			{Key: "inventory", Value: bson.D{
+				{Key: "$elemMatch", Value: bson.D{ // Check if the user has the item in their inventory
+					{Key: "name", Value: item}, // If they do, update the quantity
+				}},
+			}},
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{
+				{Key: "inventory.$.quantity", Value: amount}, // Increment the quantity by the amount specified
+			}},
+		},
+	)
+	if err != nil {
+		fmt.Printf("Error occurred while updating database! %s\n", err)
+		return "Error occurred while updating database! " + strings.Title(err.Error())
+	}
+
+	// If the user doesn't have the item in their inventory, add it
+	// This will not run if the user already has the item in their inventory because of the $not operator
+	_, err = userCollection.UpdateOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+			{Key: "inventory", Value: bson.D{
+				{Key: "$not", Value: bson.D{ // Check if the user doesn't have the item in their inventory
+					{Key: "$elemMatch", Value: bson.D{ 
+						{Key: "name", Value: item},
+					}},
+				}},
+			}},
+		},
+		bson.D{
+			{Key: "$push", Value: bson.D{
+				{Key: "inventory", Value: bson.D{ // Add the item to the user's inventory
+					{Key: "name", Value: item}, 
+					{Key: "quantity", Value: amount},
+				}},
+			}},
+		},
+	)
+	if err != nil {
+		fmt.Printf("Error occurred while updating database! %s\n", err)
+		return "Error occurred while updating database! " + strings.Title(err.Error())
+	}
+
+	return "You have successfully bought " + strconv.Itoa(amount) + "X " + item + "!"
 }
