@@ -256,15 +256,15 @@ func Economy(mongoURI string, guildID int, guildName string, userID int, userNam
 	// Disconnect from database
 	defer client.Disconnect(ctx) // Occurs as last line of main() function
 
-	// If database for server doesn't exist, create it
-	serverDatabase := client.Database(strconv.Itoa(guildID))
-	userCollection := serverDatabase.Collection("Users")
-
 	// Check if user exists in database
 	res := IsPlaying(ctx, client, guildID, guildName, userID, userName)
 	if res != "" {
 		return res
 	}
+
+	// If database for server doesn't exist, create it
+	serverDatabase := client.Database(strconv.Itoa(guildID))
+	userCollection := serverDatabase.Collection("Users")
 
 	switch operation {
 		case "bal":
