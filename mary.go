@@ -165,6 +165,9 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 						Name: "mary bal [optional: @user]",
 						Value: "Shows your balance or a specified user's balance.",
 					},{
+						Name: "mary inventory",
+						Value: "Shows your inventory.",
+					},{
 						Name: "mary shop [optional: page number]",
 						Value: "Shows the shop. You can also specify a page number.",
 					},{
@@ -363,6 +366,16 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			} else {
 				session.ChannelMessageSend(message.ChannelID, "Error retrieving balance!")
 			}
+		
+		// mary inventory -> shows user's inventory
+		case strings.ToLower(command[1]) == "inventory" || strings.ToLower(command[1]) == "inv": {
+			err, res := database.Inventory(MONGO_URI, guildID, guildName, userID, userName)
+			if err != "" {
+				session.ChannelMessageSend(message.ChannelID, err)
+				break
+			}
+			session.ChannelMessageSendEmbed(message.ChannelID, res)
+		}
 
 		// mary shop -> shows shop
 		case strings.ToLower(command[1]) == "shop":
