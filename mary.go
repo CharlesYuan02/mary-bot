@@ -401,6 +401,11 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 		
 		// mary buy -> buys an item from the shop
 		case strings.ToLower(command[1]) == "buy":
+			// Check if user specified an item
+			if len(command) == 2 {
+				session.ChannelMessageSend(message.ChannelID, "Please specify an item to buy!")
+				break
+			}
 			words := strings.Fields(message.Content)
 			lastWord := words[len(words)-1] // Check if amount specified is an integer (should be last argument)
 			if num, err := strconv.Atoi(lastWord); err == nil {
