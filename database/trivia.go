@@ -46,11 +46,9 @@ func Trivia(session *discordgo.Session, message *discordgo.MessageCreate, mongoU
 	// Disconnect from database
 	defer client.Disconnect(ctx) // Occurs as last line of main() function
 
-	// If database for server doesn't exist, create it
+	// Get user from database
 	serverDatabase := client.Database(strconv.Itoa(guildID))
 	userCollection := serverDatabase.Collection("Users")
-
-	// Check if user exists in database
 	collectionResult, err := userCollection.FindOne(
 		ctx,
 		bson.D{
@@ -258,11 +256,15 @@ func CheckBalance(session *discordgo.Session, message *discordgo.MessageCreate, 
 	// Disconnect from database
 	defer client.Disconnect(ctx) // Occurs as last line of main() function
 
-	// If database for server doesn't exist, create it
+	// Check if user exists in database
+	res := IsPlaying(ctx, client, guildID, guildName, userID, userName)
+	if res != "" {
+		return res
+	}
+
+	// Get user from database
 	serverDatabase := client.Database(strconv.Itoa(guildID))
 	userCollection := serverDatabase.Collection("Users")
-
-	// Check if user exists in database
 	collectionResult, err := userCollection.FindOne(
 		ctx,
 		bson.D{
@@ -270,36 +272,7 @@ func CheckBalance(session *discordgo.Session, message *discordgo.MessageCreate, 
 			{Key: "guild_id", Value: guildID},
 		},
 	).DecodeBytes()
-	_ = collectionResult // Unused variable
-	if err != nil {
-		// If user doesn't exist, create them
-		if err == mongo.ErrNoDocuments {
-			// Insert user into database
-			result, err := userCollection.InsertOne(
-				ctx,
-				bson.D{
-					{Key: "user_id", Value: userID},
-					{Key: "user_name", Value: userName},
-					{Key: "guild_id", Value: guildID},
-					{Key: "guild_name", Value: guildName},
-					{Key: "balance", Value: int64(0)}, // Enter balance as int64 value
-					{Key: "last_daily", Value: time.Now().AddDate(0, 0, -1)},
-					{Key: "last_beg", Value: time.Now().AddDate(0, 0, -1)},
-					{Key: "last_rob", Value: time.Now().AddDate(0, 0, -1)},
-					{Key: "last_gamble", Value: time.Now().AddDate(0, 0, -1)},
-					{Key: "last_trivia", Value: time.Now().AddDate(0, 0, -1)},
-				},
-			)
-			if err != nil {
-				fmt.Printf("Error occurred while inserting to database! %s\n", err)
-				return "Error occurred while inserting to database! " + strings.Title(err.Error())
-			}
-			fmt.Printf("Inserted user %s into database with ID %s\n", userName, result.InsertedID)
-		} else {
-			fmt.Printf("Error occurred while selecting from database! %s\n", err)
-			return "Error occurred while selecting from database! " + strings.Title(err.Error())
-		}
-	}
+	
 	// Find user
 	collectionResult, err2 := userCollection.FindOne(context.Background(), bson.D{
 		{Key: "user_id", Value: userID},

@@ -79,4 +79,3 @@ func Shop(session *discordgo.Session, message *discordgo.MessageCreate, pageSize
 		return
 	}
 }
-
