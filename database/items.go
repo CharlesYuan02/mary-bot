@@ -163,27 +163,8 @@ func Buy(mongoURI string, guildID int, guildName string, userID int, userName st
 		return "You don't have enough money to buy this item!"
 	}
 
-	// Otherwise, let the user buy the item
-	// Update user balance
-	_, err = userCollection.UpdateOne(
-		ctx,
-		bson.D{
-			{Key: "user_id", Value: userID},
-			{Key: "guild_id", Value: guildID},
-		},
-		bson.D{
-			{Key: "$set", Value: bson.D{
-				{Key: "balance", Value: balance.Int64() - int64(itemPrice) * int64(amount)},
-			}},
-		},
-	)
-	if err != nil {
-		fmt.Printf("Error occurred while updating database! %s\n", err)
-		return "Error occurred while updating database! " + strings.Title(err.Error())
-	}
-
 	// Check if the user already has this item in their inventory (in which case we +1)
-	// Otherwise, we add the item to their inventory
+	// Otherwise, we add the item to their inventory and update their balance
 	_, err = userCollection.UpdateOne(
 		ctx,
 		bson.D{
@@ -198,6 +179,9 @@ func Buy(mongoURI string, guildID int, guildName string, userID int, userName st
 		bson.D{
 			{Key: "$inc", Value: bson.D{
 				{Key: "inventory.$.quantity", Value: amount}, // Increment the quantity by the amount specified
+			}},
+			{Key: "$inc", Value: bson.D{ // Remember that $dec is not a thing
+				{Key: "balance", Value: -itemPrice * amount}, // Decrement the balance by the price of the item * the amount specified
 			}},
 		},
 	)
@@ -228,6 +212,9 @@ func Buy(mongoURI string, guildID int, guildName string, userID int, userName st
 					{Key: "quantity", Value: amount},
 				}},
 			}},
+			{Key: "$inc", Value: bson.D{
+				{Key: "balance", Value: -itemPrice * amount}, // Decrement the balance by the price of the item * the amount specified
+			}},
 		},
 	)
 	if err != nil {
@@ -235,7 +222,110 @@ func Buy(mongoURI string, guildID int, guildName string, userID int, userName st
 		return "Error occurred while updating database! " + strings.Title(err.Error())
 	}
 
-	return "You have successfully bought " + strconv.Itoa(amount) + "X " + item + "!"
+	return "You have successfully bought " + strconv.Itoa(amount) + "X " + item + " for " + strconv.Itoa(itemPrice * amount) + " coins!"
+}
+
+func Sell(mongoURI string, guildID int, guildName string, userID int, userName string, item string, amount int) (string) {
+	// Connect to MongoDB
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
+	if err != nil {
+		fmt.Printf("Error occurred creating MongoDB client! %s\n", err)
+		return "Error occurred creating MongoDB client! " + strings.Title(err.Error())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // Timeout for connection is 10 secs
+	defer cancel() // Fix for memory leak
+	err = client.Connect(ctx)
+	if err != nil {
+		fmt.Printf("Error occurred while connecting to database! %s\n", err)
+		return "Error occurred while connecting to database! " + strings.Title(err.Error())
+	}
+
+	// Disconnect from database
+	defer client.Disconnect(ctx) // Occurs as last line of main() function
+
+	// Check if user exists in database
+	res := IsPlaying(ctx, client, guildID, guildName, userID, userName)
+	if res != "" {
+		return res
+	}
+
+	// Get user from database
+	userCollection := client.Database(strconv.Itoa(guildID)).Collection("Users")
+	filter := bson.M{"guild_id": guildID, "user_id": userID}
+	var user User // User struct defined in database.go
+	err = userCollection.FindOne(ctx, filter).Decode(&user)
+	if err != nil {
+		fmt.Printf("Error occurred while finding user in database! %s\n", err)
+		return "Error occurred while finding user in database! " + strings.Title(err.Error())
+	}
+
+	// Check if user has an inventory
+	if len(user.Inventory) == 0 {
+		return "You do not have any items in your inventory!"
+	}
+
+	// Get price of item specified from items
+	itemPrice := 0
+	for i := range items {
+		// Ignore the first character of the item name because it is a unicode emoji
+		// Second character is a space
+		pattern := regexp.MustCompile(`^\p{So}|\s`)
+		if strings.ToLower(pattern.ReplaceAllString(items[i].Name, "")) == item {
+			itemPrice = items[i].Price
+			break
+		}
+	}
+
+	// Check if item exists
+	if itemPrice == 0 {
+		return "That item doesn't exist!"
+	}
+
+	// Check the quantity of the item the user currently has
+	itemAmount := 0
+	for i := range user.Inventory {
+		if strings.ToLower(user.Inventory[i].Name) == item {
+			itemAmount = user.Inventory[i].Quantity
+			break
+		}
+	}
+
+	// If the user doesn't have enough, return
+	if itemAmount < amount {
+		return "You don't have enough of that item to sell!"
+	}
+
+	// Set the sell price to 50% of the item's price
+	itemPrice = itemPrice / 2
+
+	// Otherwise, let the user sell the item and update their balance
+	_, err = userCollection.UpdateOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+			{Key: "inventory", Value: bson.D{
+				{Key: "$elemMatch", Value: bson.D{ // Check if the user has the item in their inventory
+					{Key: "name", Value: item}, // If they do, update the quantity
+				}},
+			}},
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{ // Remember that $dec is not a thing
+				{Key: "inventory.$.quantity", Value: -amount}, // Decrement the quantity by the amount specified
+			}},
+			{Key: "$inc", Value: bson.D{
+				{Key: "balance", Value: itemPrice * amount}, // Increment the balance by the price of the item * the amount specified
+			}},
+		},
+	)
+	if err != nil {
+		fmt.Printf("Error occurred while updating database! %s\n", err)
+		return "Error occurred while updating database! " + strings.Title(err.Error())
+	}
+
+	return "You have successfully sold " + strconv.Itoa(amount) + "X " + item + " for " + strconv.Itoa(itemPrice * amount) + " coins!"
 }
 
 type User struct {
@@ -276,10 +366,10 @@ func Inventory(mongoURI string, guildID int, guildName string, userID int, userN
 	}
 
 	// Get user from database
-	usersCollection := client.Database(strconv.Itoa(guildID)).Collection("Users")
+	userCollection := client.Database(strconv.Itoa(guildID)).Collection("Users")
 	filter := bson.M{"guild_id": guildID, "user_id": userID}
 	var user User // User struct defined in database.go
-	err = usersCollection.FindOne(ctx, filter).Decode(&user)
+	err = userCollection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		fmt.Printf("Error occurred while finding user in database! %s\n", err)
 		return "Error occurred while finding user in database! " + strings.Title(err.Error()), nil

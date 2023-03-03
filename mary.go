@@ -171,8 +171,11 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 						Name: "mary shop [optional: page number]",
 						Value: "Shows the shop. You can also specify a page number.",
 					},{
-						Name: "mary buy [item name] [amount]",
-						Value: "Buys the specified item.",
+						Name: "mary buy [item name] [optional: amount]",
+						Value: "Buys the specified item. The default amount is 1.",
+					},{
+						Name: "mary sell [item name] [optional: amount]",
+						Value: "Sells the specified item at half the original price.",
 					},{
 						Name: "mary daily",
 						Value: "Gives you 100 coins.",
@@ -421,6 +424,31 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				// Get item name -> assume user wants to buy 1 of the item and the rest of the command is the item name
 				item := strings.Join(command[2:], " ")
 				res := database.Buy(MONGO_URI, guildID, guildName, userID, userName, strings.ToLower(item), 1)
+				session.ChannelMessageSend(message.ChannelID, res)
+			}
+
+		// mary sell -> sells an item from the user's inventory
+		case strings.ToLower(command[1]) == "sell":
+			// Check if user specified an item
+			if len(command) == 2 {
+				session.ChannelMessageSend(message.ChannelID, "Please specify an item to sell!")
+				break
+			}
+			words := strings.Fields(message.Content)
+			lastWord := words[len(words)-1] // Check if amount specified is an integer (should be last argument)
+			if num, err := strconv.Atoi(lastWord); err == nil {
+				// If the last word is an integer, assume the user wants to sell that many of the item
+				// Get item name
+				item := strings.Join(command[2:len(command)-1], " ") // 0 is mary, 1 is sell
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Error occurred while converting item number!" + strings.Title(err.Error()))
+				}
+				res := database.Sell(MONGO_URI, guildID, guildName, userID, userName, strings.ToLower(item), num)
+				session.ChannelMessageSend(message.ChannelID, res)
+			} else {
+				// Get item name -> assume user wants to sell 1 of the item and the rest of the command is the item name
+				item := strings.Join(command[2:], " ")
+				res := database.Sell(MONGO_URI, guildID, guildName, userID, userName, strings.ToLower(item), 1)
 				session.ChannelMessageSend(message.ChannelID, res)
 			}
 
