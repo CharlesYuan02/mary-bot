@@ -212,6 +212,24 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 				return "Error occurred while updating database! " + strings.Title(err.Error())
 			}
 
+			// Reduce the pinged user's item amount by 1
+			_, err = pingedUserCollection.UpdateOne(
+				ctx,
+				bson.D{
+					{Key: "user_id", Value: pingedUserID},
+					{Key: "guild_id", Value: guildID},
+				},
+				bson.D{
+					{Key: "$inc", Value: bson.D{ // Remember that $dec is not a thing
+						{Key: "inventory.$.amount", Value: -1},
+					}},
+				},
+			)
+			if err != nil {
+				fmt.Printf("Error occurred while updating database! %s\n", err)
+				return "Error occurred while updating database! " + strings.Title(err.Error())
+			}
+			
 			return "You tried to rob <@" + strconv.Itoa(pingedUserID) + "> with a bow, but they had a gun and shot you! You lost " + strconv.Itoa(int(robbedAmount)) + " coins!"
 		} else {
 		_, err = pingedUserCollection.UpdateOne(
