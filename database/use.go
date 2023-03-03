@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/bson"
+	commands "mary-bot/commands"
 )
 
 // Structs are defined in items.go
@@ -56,10 +57,12 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 	}
 
 	// Check if user has the item in their inventory
-	for _, i := range user.Inventory {
-		if i.Name == item {
+	itemIndex := -1
+	for index, it := range user.Inventory {
+		if it.Name == item {
+			itemIndex = index
 			// Check if the user has enough of the item
-			if i.Quantity < 1 {
+			if it.Quantity < 1 {
 				return "You do not have enough of that item in your inventory to use!"
 			}
 		}
@@ -68,7 +71,7 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 	// Check if the user has waited a minute since their last use indicated by last_use
 	// If the user has not waited a minute, return an error
 	lastUse := user.LastUse
-	if time.Since(lastUse) < time.Minute {
+	if time.Since(lastUse) < time.Minute && commands.IsOwner(userID) == false {
 		return "You must wait a minute between uses!"
 	}
 	
@@ -91,22 +94,27 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 	}
 
 	// Update the user's inventory to reduce the amount of the item they have
+	user.Inventory[itemIndex].Quantity -= 1
+	if user.Inventory[itemIndex].Quantity == 0 {
+		user.Inventory = append(user.Inventory[:itemIndex], user.Inventory[itemIndex+1:]...)
+	}
 	_, err = userCollection.UpdateOne(
 		ctx,
-		bson.D{
-			{Key: "user_id", Value: userID},
-			{Key: "guild_id", Value: guildID},
-			{Key: "inventory.item.name", Value: item}, // Get the item in the inventory 
-		},
-		bson.D{
-			{Key: "$inc", Value: bson.D{ // Remember that $dec is not a thing
-				{Key: "inventory.$.quantity", Value: -1},
-			}},
+		filter,
+		bson.M{
+			"$set": bson.M{
+				"inventory": user.Inventory,
+			},
 		},
 	)
 	if err != nil {
 		fmt.Printf("Error occurred while updating database! %s\n", err)
 		return "Error occurred while updating database! " + strings.Title(err.Error())
+	}
+	_, err = userCollection.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"inventory": user.Inventory}})
+	if err != nil {
+		fmt.Printf("Error occurred while updating user's inventory! %s\n", err)
+		return "Error occurred while updating user's inventory! " + strings.Title(err.Error())
 	}
 	
 	// Check what the item is
