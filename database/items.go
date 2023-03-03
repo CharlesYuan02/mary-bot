@@ -449,50 +449,98 @@ func Give(mongoURI string, guildID int, guildName string, userID int, userName s
 		return "Error occurred while finding user in database! " + strings.Title(err.Error())
 	}
 
+	// Check if item exists
+	itemPrice := 0
+	for i := range items {
+		pattern := regexp.MustCompile(`^\p{So}|\s`)
+		if strings.ToLower(pattern.ReplaceAllString(items[i].Name, "")) == item {
+			itemPrice = items[i].Price
+			break
+		}
+	}
+	if itemPrice == 0 {
+		return "That item doesn't exist!"
+	}
+
 	// Check if the user has the item in their inventory
-	for _, inventoryItem := range user.Inventory {
+	itemName := ""
+	itemIndex := -1
+	for i, inventoryItem := range user.Inventory {
 		if inventoryItem.Name == item {
+			itemName = inventoryItem.Name
+			itemIndex = i
 			if inventoryItem.Quantity < amount {
 				return "You do not have enough of this item to give!"
 			}
 		}
 	}
+	if itemName == "" {
+		return "You do not have this item in your inventory!"
+	}
 
 	// Otherwise, update the user's inventory and the pinged user's inventory
+	user.Inventory[itemIndex].Quantity -= amount
+	if user.Inventory[itemIndex].Quantity == 0 {
+		user.Inventory = append(user.Inventory[:itemIndex], user.Inventory[itemIndex+1:]...)
+	}
 	_, err = userCollection.UpdateOne(
 		ctx,
-		bson.D{
-			{Key: "user_id", Value: userID},
-			{Key: "guild_id", Value: guildID},
-			{Key: "inventory.item.name", Value: item}, // Get the item in the inventory 
-		},
-		bson.D{
-			{Key: "$inc", Value: bson.D{ // Remember that $dec is not a thing
-				{Key: "inventory.$.quantity", Value: -amount},
-			}},
+		filter,
+		bson.M{
+			"$set": bson.M{
+				"inventory": user.Inventory,
+			},
 		},
 	)
 	if err != nil {
 		fmt.Printf("Error occurred while updating database! %s\n", err)
 		return "Error occurred while updating database! " + strings.Title(err.Error())
 	}
-
-	_, err = userCollection.UpdateOne(
-		ctx,
-		bson.D{
-			{Key: "user_id", Value: pingedUser},
-			{Key: "guild_id", Value: guildID},
-			{Key: "inventory.item.name", Value: item}, // Get the item in the inventory
-		},
-		bson.D{
-			{Key: "$inc", Value: bson.D{ // Remember that $dec is not a thing
-				{Key: "inventory.$.quantity", Value: amount},
-			}},
-		},
-	)
+	_, err = userCollection.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"inventory": user.Inventory}})
 	if err != nil {
-		fmt.Printf("Error occurred while updating database! %s\n", err)
-		return "Error occurred while updating database! " + strings.Title(err.Error())
+		fmt.Printf("Error occurred while updating user's inventory! %s\n", err)
+		return "Error occurred while updating user's inventory! " + strings.Title(err.Error())
+	}
+
+	// Update pinged user's inventory
+	pingedUserCollection := client.Database(strconv.Itoa(guildID)).Collection("Users")
+	filter = bson.M{"guild_id": guildID, "user_id": pingedUser}
+
+	// Check if pinged user has an inventory
+	var pingedUserStruct User
+	err = pingedUserCollection.FindOne(ctx, filter).Decode(&pingedUserStruct)
+	if err != nil {
+		// If the user doesn't have an inventory, create a new one with the given item and amount
+		update := bson.M{"$set": bson.M{"inventory": []bson.M{{"name": item, "quantity": amount}}}}
+		opts := options.Update().SetUpsert(true)
+		_, err = pingedUserCollection.UpdateOne(ctx, filter, update, opts)
+		if err != nil {
+			fmt.Printf("Error occurred while updating pinged user's inventory! %s\n", err)
+			return "Error occurred while updating pinged user's inventory! " + strings.Title(err.Error())
+		}
+	} else {
+		// If the user already has an inventory, update the quantity of the given item
+		inventory := pingedUserStruct.Inventory
+		itemIndex := -1
+		for i, inventoryItem := range inventory {
+			if inventoryItem.Name == item {
+				itemIndex = i
+				break
+			}
+		}
+		if itemIndex == -1 {
+			// If the user doesn't have the item, add it to their inventory
+			inventory = append(inventory, Item{Name: item, Quantity: amount})
+		} else {
+			// If the user already has the item, update the quantity
+			inventory[itemIndex].Quantity += amount
+		}
+		update := bson.M{"$set": bson.M{"inventory": inventory}}
+		_, err = pingedUserCollection.UpdateOne(ctx, filter, update)
+		if err != nil {
+			fmt.Printf("Error occurred while updating pinged user's inventory! %s\n", err)
+			return "Error occurred while updating pinged user's inventory! " + strings.Title(err.Error())
+		}
 	}
 
 	return fmt.Sprintf("You gave %dX %s to <@%d>!", amount, item, pingedUser)
