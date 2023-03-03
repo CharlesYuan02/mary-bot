@@ -22,11 +22,11 @@ type ShopItem struct {
 
 // Define the items for sale
 var items = []ShopItem{ // Global variables don't use :=, they use =
-	{"🔫 Gun", 500, "It's a gun... what do you expect?"},
+	{"🔫 Gun", 2000, "It's a gun... what do you expect?"},
 	{"🚗 Car", 10000, "Run people over with this car!"},
 	{"🍫 Chocolate", 50, "A great gift to give to a friend... or enemy."},
 	{"💍 Ring", 1000, "Congratulations! Who's the lucky person?"},
-	{"🏹 Bow", 400, "You should probably learn how to use this first..."},
+	{"🏹 Bow", 400, "It might not be as strong as a gun, but it's cheaper!"},
 }
 
 // Lookup table for emojis
@@ -36,6 +36,19 @@ var emojiLookup = map[string]string{
 	"Chocolate": "🍫",
 	"Ring": "💍",
 	"Bow": "🏹",
+}
+
+type User struct {
+	UserID   int    `bson:"user_id"`
+	GuildID  int    `bson:"guild_id"`
+	Balance  int64  `bson:"balance"`
+	LastUse  time.Time `bson:"last_use"`
+	Inventory []Item `bson:"inventory"`
+}
+
+type Item struct {
+	Name     string `bson:"name"`
+	Quantity int    `bson:"quantity"`
 }
 
 // No return value because we are using the session to add reactions to the message
@@ -328,18 +341,6 @@ func Sell(mongoURI string, guildID int, guildName string, userID int, userName s
 	return "You have successfully sold " + strconv.Itoa(amount) + "X " + item + " for " + strconv.Itoa(itemPrice * amount) + " coins!"
 }
 
-type User struct {
-	UserID   int    `bson:"user_id"`
-	GuildID  int    `bson:"guild_id"`
-	Balance  int64  `bson:"balance"`
-	Inventory []Item `bson:"inventory"`
-}
-
-type Item struct {
-	Name     string `bson:"name"`
-	Quantity int    `bson:"quantity"`
-}
-
 func Inventory(mongoURI string, guildID int, guildName string, userID int, userName string) (string, *discordgo.MessageEmbed) {
 	// Connect to MongoDB
 	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
@@ -403,4 +404,95 @@ func Inventory(mongoURI string, guildID int, guildName string, userID int, userN
 	}
 
 	return "", embed
+}
+
+func Give(mongoURI string, guildID int, guildName string, userID int, userName string, item string, amount int, pingedUser int) (string) {
+	// Connect to MongoDB
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
+	if err != nil {
+		fmt.Printf("Error occurred creating MongoDB client! %s\n", err)
+		return "Error occurred creating MongoDB client! " + strings.Title(err.Error())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // Timeout for connection is 10 secs
+	defer cancel() // Fix for memory leak
+	err = client.Connect(ctx)
+	if err != nil {
+		fmt.Printf("Error occurred while connecting to database! %s\n", err)
+		return "Error occurred while connecting to database! " + strings.Title(err.Error())
+	}
+
+	// Disconnect from database
+	defer client.Disconnect(ctx) // Occurs as last line of main() function
+
+	// Check if user exists in database
+	res := IsPlaying(ctx, client, guildID, guildName, userID, userName)
+	if res != "" {
+		return res
+	}
+
+	// Check if pinged user exists in database
+	res = IsPlaying(ctx, client, guildID, guildName, pingedUser, "")
+	if res != "" {
+		return res
+	}
+
+	// Check if the user has enough of the item to give
+	userCollection := client.Database(strconv.Itoa(guildID)).Collection("Users")
+	filter := bson.M{"guild_id": guildID, "user_id": userID}
+	var user User // User struct defined in database.go
+
+	err = userCollection.FindOne(ctx, filter).Decode(&user)
+	if err != nil {
+		fmt.Printf("Error occurred while finding user in database! %s\n", err)
+		return "Error occurred while finding user in database! " + strings.Title(err.Error())
+	}
+
+	// Check if the user has the item in their inventory
+	for _, inventoryItem := range user.Inventory {
+		if inventoryItem.Name == item {
+			if inventoryItem.Quantity < amount {
+				return "You do not have enough of this item to give!"
+			}
+		}
+	}
+
+	// Otherwise, update the user's inventory and the pinged user's inventory
+	_, err = userCollection.UpdateOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+			{Key: "inventory.item.name", Value: item}, // Get the item in the inventory 
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{ // Remember that $dec is not a thing
+				{Key: "inventory.$.quantity", Value: -amount},
+			}},
+		},
+	)
+	if err != nil {
+		fmt.Printf("Error occurred while updating database! %s\n", err)
+		return "Error occurred while updating database! " + strings.Title(err.Error())
+	}
+
+	_, err = userCollection.UpdateOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: pingedUser},
+			{Key: "guild_id", Value: guildID},
+			{Key: "inventory.item.name", Value: item}, // Get the item in the inventory
+		},
+		bson.D{
+			{Key: "$inc", Value: bson.D{ // Remember that $dec is not a thing
+				{Key: "inventory.$.quantity", Value: amount},
+			}},
+		},
+	)
+	if err != nil {
+		fmt.Printf("Error occurred while updating database! %s\n", err)
+		return "Error occurred while updating database! " + strings.Title(err.Error())
+	}
+
+	return fmt.Sprintf("You gave %dX %s to <@%d>!", amount, item, pingedUser)
 }

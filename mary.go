@@ -168,13 +168,13 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 						},{
 							Name: "mary inventory",
 							Value: "Shows your inventory.",
-						},{
-							Name: "mary use [item name] [@user] [optional: amount]",
-							Value: "Uses the specified item on the mentioned user. The default amount is 1.",
+						},{ 
+							Name: "mary give @user [item name] [optional: amount]",
+							Value: "Gives an item to a specified user. The default amount is 1.",
 						},
 					},
 					Footer: &discordgo.MessageEmbedFooter{
-						Text: "Page 1/2",
+						Text: "Page 1/3",
 					},
 				}
 				session.ChannelMessageSendEmbed(message.ChannelID, embed)
@@ -187,7 +187,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				return
 			}
 
-			if pageNumber < 1 || pageNumber > 2 {
+			if pageNumber < 1 || pageNumber > 3 {
 				session.ChannelMessageSend(message.ChannelID, "Please enter a valid page number!")
 				return
 			}
@@ -239,12 +239,12 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 							Name: "mary inventory",
 							Value: "Shows your inventory.",
 						},{
-							Name: "mary use [item name] [@user] [optional: amount]",
-							Value: "Uses the specified item on the mentioned user. The default amount is 1.",
+							Name: "mary give @user [item name] [optional: amount]",
+							Value: "Gives an item to a specified user. The default amount is 1.",
 						},
 					},
 					Footer: &discordgo.MessageEmbedFooter{
-						Text: "Page 1/2",
+						Text: "Page 1/3",
 					},
 				}
 				session.ChannelMessageSendEmbed(message.ChannelID, embed)
@@ -270,7 +270,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 							Name: "mary daily",
 							Value: "Gives you 100 coins.",
 						},{
-							Name: "mary pay/give @user [amount]",
+							Name: "mary pay @user [amount]",
 							Value: "Pays the mentioned user the specified amount of coins.",
 						},{
 							Name: "mary top/leaderboard",
@@ -290,10 +290,28 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 						},
 					},
 					Footer: &discordgo.MessageEmbedFooter{
-						Text: "Page 2/2",
+						Text: "Page 2/3",
 					},
 				}
 				session.ChannelMessageSendEmbed(message.ChannelID, embed)	
+			} else if pageNumber == 3 {
+				// Create a rich embed
+				embed := &discordgo.MessageEmbed{
+					Title: "Mary's Commands",
+					Color: 0xffc0cb,
+					Thumbnail: &discordgo.MessageEmbedThumbnail{
+						URL: maryAvatar,
+					},
+					Fields: []*discordgo.MessageEmbedField{{
+						Name: "mary use [item name] [@user] [optional: amount]",
+						Value: "Uses the specified item on the mentioned user. The default amount is 1.",
+					},
+				},
+				Footer: &discordgo.MessageEmbedFooter{
+					Text: "Page 3/3",
+				},
+				}
+				session.ChannelMessageSendEmbed(message.ChannelID, embed)
 			}
 		}
 		
@@ -474,6 +492,48 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			session.ChannelMessageSendEmbed(message.ChannelID, res)
 		}
 
+		case strings.ToLower(command[1]) == "give":
+			if len(command) < 3 {
+				session.ChannelMessageSend(message.ChannelID, "Please specify a user to give the item to!")
+				break
+			} else if len(command) < 4 {
+				session.ChannelMessageSend(message.ChannelID, "Please specify an item to give!")
+				break
+			} else if len(command) < 5 {
+				// Assume amount to give is 1
+				amount := 1
+				item := strings.Join(command[3:], " ")
+				pingedUser := strings.Trim(command[2], "<@!>")
+				pingedUserID, err := strconv.Atoi(pingedUser)
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Error occurred while getting user ID!" + strings.Title(err.Error()))
+				}
+				if pingedUserID == userID {
+					session.ChannelMessageSend(message.ChannelID, "You can't give yourself an item!")
+					break
+				}
+				res := database.Give(MONGO_URI, guildID, guildName, userID, userName, item, amount, pingedUserID)
+				session.ChannelMessageSend(message.ChannelID, res)
+			} else {
+				// Assume amount to give is specified
+				amount, err := strconv.Atoi(command[len(command)-1])
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Please enter a valid amount to give!")
+				}
+				item := strings.Join(command[3:len(command)-1], " ")
+				pingedUser := strings.Trim(command[2], "<@!>")
+				pingedUserID, err := strconv.Atoi(pingedUser)
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Error occurred while getting user ID!" + strings.Title(err.Error()))
+				}
+				if pingedUserID == userID {
+					session.ChannelMessageSend(message.ChannelID, "You can't give yourself an item!")
+					break
+				}
+				res := database.Give(MONGO_URI, guildID, guildName, userID, userName, item, amount, pingedUserID)
+				session.ChannelMessageSend(message.ChannelID, res)
+			}	
+
 		// mary shop -> shows shop
 		case strings.ToLower(command[1]) == "shop":
 			pageSize := 3
@@ -566,8 +626,8 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			res := database.UserInteraction(MONGO_URI, guildID, guildName, userID, userName, pingedUser, "rob", 0)
 			session.ChannelMessageSend(message.ChannelID, res)
 
-		// mary pay/give @user amount -> gives user amount of coins
-		case strings.ToLower(command[1]) == "pay" || strings.ToLower(command[1]) == "give":
+		// mary pay @user amount -> gives user amount of coins
+		case strings.ToLower(command[1]) == "pay":
 			if len(command) == 3 {
 				session.ChannelMessageSend(message.ChannelID, "Please specify an amount to be paid!")
 				return
@@ -750,6 +810,67 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			}
 			res := database.Economy(MONGO_URI, guildID, guildName, userID, userName, "slots", 10)
 			session.ChannelMessageSend(message.ChannelID, res)
+		
+		// mary use -> uses an item from the user's inventory on a target
+		case strings.ToLower(command[1]) == "use":
+			if len(command) == 2 {
+				session.ChannelMessageSend(message.ChannelID, "Please specify an item to use!")
+				break
+			}
+			// Get item specified
+			words := strings.Fields(message.Content)
+			item := strings.ToLower(words[2])
+			switch item {
+			case "gun": { // mary use gun @target [optional: amount]
+				// Check if the user has specified a target
+				if len(words) < 4 {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a target!")
+					break
+				}
+
+				// Check if the user has specified an amount
+				lastWord := words[len(words)-1] // Check if amount specified is an integer (should be last argument)
+				if num, err := strconv.Atoi(lastWord); err == nil { // If the last word is an integer
+					pingedUser := strings.Trim(command[len(words)-2], "<@!>") // Get the target
+					if pingedUser == "" {
+						session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+						break
+					}
+					pingedUserID, err := strconv.Atoi(pingedUser)
+					if err != nil {
+						session.ChannelMessageSend(message.ChannelID, "Error occurred while getting target ID!" + strings.Title(err.Error()))
+						break
+					}
+					// Make sure the user doesn't use the gun on themselves
+					if pingedUserID == userID {
+						session.ChannelMessageSend(message.ChannelID, "You can't rob yourself!")
+						break
+					}
+					res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "gun", num, pingedUserID)
+					session.ChannelMessageSend(message.ChannelID, res)
+
+				} else { // If the last word is not an integer, assume amount is 1
+					pingedUser := strings.Trim(command[len(words)-1], "<@!>") // Get the target
+					if pingedUser == "" {
+						session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+						break
+					}
+					pingedUserID, err := strconv.Atoi(pingedUser)
+					if err != nil {
+						session.ChannelMessageSend(message.ChannelID, "Error occurred while getting target ID!" + strings.Title(err.Error()))
+						break
+					}
+					// Make sure the user doesn't use the gun on themselves
+					if pingedUserID == userID {
+						session.ChannelMessageSend(message.ChannelID, "You can't rob yourself!")
+						break
+					}
+					res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "gun", 1, pingedUserID)
+					session.ChannelMessageSend(message.ChannelID, res)
+				}
+
+			}
+		}
 
 		// Everything else (will most likely return "I'm sorry, I dont recognize that command.")
 		default:
