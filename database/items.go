@@ -431,17 +431,18 @@ func Give(mongoURI string, guildID int, guildName string, userID int, userName s
 		return res
 	}
 
-	// Check if pinged user exists in database
-	res = IsPlaying(ctx, client, guildID, guildName, pingedUser, "")
-	if res != "" {
-		return res
-	}
-
 	// Check if the user has enough of the item to give
 	userCollection := client.Database(strconv.Itoa(guildID)).Collection("Users")
+
+	// Check if pinged user exists in database
+	err = userCollection.FindOne(ctx, bson.M{"guild_id": guildID, "user_id": pingedUser}).Err()
+	if err != nil {
+		return "The user you are trying to give an item to is not playing the game!"
+	}
+
+	// Get user from database
 	filter := bson.M{"guild_id": guildID, "user_id": userID}
 	var user User // User struct defined in database.go
-
 	err = userCollection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		fmt.Printf("Error occurred while finding user in database! %s\n", err)

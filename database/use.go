@@ -15,7 +15,7 @@ import (
 // Structs are defined in items.go
 
 
-func Use(mongoURI string, guildID int, guildName string, userID int, userName string, item string, amount int, pingedUserID int) (string) {
+func Use(mongoURI string, guildID int, guildName string, userID int, userName string, item string, pingedUserID int) (string) {
 	// Connect to MongoDB
 	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
 	if err != nil {
@@ -59,7 +59,7 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 	for _, i := range user.Inventory {
 		if i.Name == item {
 			// Check if the user has enough of the item
-			if i.Quantity < amount {
+			if i.Quantity < 1 {
 				return "You do not have enough of that item in your inventory to use!"
 			}
 		}
@@ -100,7 +100,7 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 		},
 		bson.D{
 			{Key: "$inc", Value: bson.D{ // Remember that $dec is not a thing
-				{Key: "inventory.$.quantity", Value: -amount},
+				{Key: "inventory.$.quantity", Value: -1},
 			}},
 		},
 	)
@@ -191,7 +191,8 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 			}
 		}
 
-		robbedAmount := int64(float64(pingedUserBalance) * (rand.Float64() * 0.1 + 0.2)) // Random percentage between 20% and 30%
+		robbedAmount := int64(float64(pingedUserBalance) * (rand.Float64() * 0.1 + 0.2)) // Random percentage between 20% and 30% for you to rob
+		lostAmount := int64(float64(user.Balance) * (rand.Float64() * 0.1 + 0.1)) // Random percentage between 10% and 20% for you to lose
 
 		// If the pinged user has a gun, then they you lost a percentage of your balance
 		if hasGun {
@@ -203,7 +204,7 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 				},
 				bson.D{
 					{Key: "$inc", Value: bson.D{ // Remember that $dec is not a thing
-						{Key: "balance", Value: -int64(robbedAmount)},
+						{Key: "balance", Value: -lostAmount},
 					}},
 				},
 			)

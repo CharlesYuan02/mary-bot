@@ -303,8 +303,8 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 						URL: maryAvatar,
 					},
 					Fields: []*discordgo.MessageEmbedField{{
-						Name: "mary use [item name] [@user] [optional: amount]",
-						Value: "Uses the specified item on the mentioned user. The default amount is 1.",
+						Name: "mary use [item name] [@user]",
+						Value: "Uses the specified item on the mentioned user. You can only use one item at a time.",
 					},
 				},
 				Footer: &discordgo.MessageEmbedFooter{
@@ -821,54 +821,53 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			words := strings.Fields(message.Content)
 			item := strings.ToLower(words[2])
 			switch item {
-			case "gun": { // mary use gun @target [optional: amount]
+			case "gun": { // mary use gun @target
 				// Check if the user has specified a target
 				if len(words) < 4 {
 					session.ChannelMessageSend(message.ChannelID, "Please specify a target!")
 					break
 				}
-
-				// Check if the user has specified an amount
-				lastWord := words[len(words)-1] // Check if amount specified is an integer (should be last argument)
-				if num, err := strconv.Atoi(lastWord); err == nil { // If the last word is an integer
-					pingedUser := strings.Trim(command[len(words)-2], "<@!>") // Get the target
-					if pingedUser == "" {
-						session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
-						break
-					}
-					pingedUserID, err := strconv.Atoi(pingedUser)
-					if err != nil {
-						session.ChannelMessageSend(message.ChannelID, "Error occurred while getting target ID!" + strings.Title(err.Error()))
-						break
-					}
-					// Make sure the user doesn't use the gun on themselves
-					if pingedUserID == userID {
-						session.ChannelMessageSend(message.ChannelID, "You can't rob yourself!")
-						break
-					}
-					res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "gun", num, pingedUserID)
-					session.ChannelMessageSend(message.ChannelID, res)
-
-				} else { // If the last word is not an integer, assume amount is 1
-					pingedUser := strings.Trim(command[len(words)-1], "<@!>") // Get the target
-					if pingedUser == "" {
-						session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
-						break
-					}
-					pingedUserID, err := strconv.Atoi(pingedUser)
-					if err != nil {
-						session.ChannelMessageSend(message.ChannelID, "Error occurred while getting target ID!" + strings.Title(err.Error()))
-						break
-					}
-					// Make sure the user doesn't use the gun on themselves
-					if pingedUserID == userID {
-						session.ChannelMessageSend(message.ChannelID, "You can't rob yourself!")
-						break
-					}
-					res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "gun", 1, pingedUserID)
-					session.ChannelMessageSend(message.ChannelID, res)
+				pingedUser := strings.Trim(command[len(words)-1], "<@!>") // Get the target
+				if pingedUser == "" {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+					break
 				}
-
+				pingedUserID, err := strconv.Atoi(pingedUser)
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+					break
+				}
+				// Make sure the user doesn't use the gun on themselves
+				if pingedUserID == userID {
+					session.ChannelMessageSend(message.ChannelID, "You can't rob yourself!")
+					break
+				}
+				res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "gun", pingedUserID)
+				session.ChannelMessageSend(message.ChannelID, res)
+			} 
+			case "bow": { // mary use bow @target [optional: amount]
+				// Check if the user has specified a target
+				if len(words) < 4 {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a target!")
+					break
+				}
+				pingedUser := strings.Trim(command[len(words)-1], "<@!>") // Get the target
+				if pingedUser == "" {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+					break
+				}
+				pingedUserID, err := strconv.Atoi(pingedUser)
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+					break
+				}
+				// Make sure the user doesn't use the gun on themselves
+				if pingedUserID == userID {
+					session.ChannelMessageSend(message.ChannelID, "You can't rob yourself!")
+					break
+				}
+				res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "bow", pingedUserID)
+				session.ChannelMessageSend(message.ChannelID, res)
 			}
 		}
 
