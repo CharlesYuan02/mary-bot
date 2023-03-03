@@ -122,6 +122,76 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 
 		// mary help -> shows all commands
 		case strings.ToLower(command[1]) == "help":
+			if len(command) == 2 {
+				// Get Mary's avatar
+				mary, err := discordgo.New("Bot " + os.Getenv("TOKEN"))
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Error retrieving my avatar!")
+				}
+				maryUser, err := mary.User("@me")
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Error retrieving my avatar!")
+				}
+				maryAvatar := maryUser.AvatarURL("")
+
+				// Create a rich embed
+				embed := &discordgo.MessageEmbed{
+					Title: "Mary's Commands",
+					Color: 0xffc0cb,
+					Thumbnail: &discordgo.MessageEmbedThumbnail{
+						URL: maryAvatar,
+					},
+					Fields: []*discordgo.MessageEmbedField{{
+							Name: "mary help [optional: page number]",
+							Value: "Shows all commands. The default page number is 1.",
+						},{
+							Name: "mary test",
+							Value: "Tests if Mary is online.",
+						},{
+							Name: "mary test connection",
+							Value: "Tests if Mary can connect to the database.",
+						},{
+							Name: "mary del [amount] (admin only)",
+							Value: "Deletes a set number of messages.",
+						},{
+							Name: "mary bankrupt @user (admin only)",
+							Value: "Reduces the user's balance to 0.",
+						},{
+							Name: "mary quote",
+							Value: "Shows a random quote.",
+						},{
+							Name: "mary profile [optional: @user]",
+							Value: "Shows your profile or a specified user's profile.",
+						},{
+							Name: "mary bal [optional: @user]",
+							Value: "Shows your balance or a specified user's balance.",
+						},{
+							Name: "mary inventory",
+							Value: "Shows your inventory.",
+						},{
+							Name: "mary use [item name] [@user] [optional: amount]",
+							Value: "Uses the specified item on the mentioned user. The default amount is 1.",
+						},
+					},
+					Footer: &discordgo.MessageEmbedFooter{
+						Text: "Page 1/2",
+					},
+				}
+				session.ChannelMessageSendEmbed(message.ChannelID, embed)
+		
+		} else if len(command) == 3 { // mary help [page number]
+			// Check if the page number is a number
+			pageNumber, err := strconv.Atoi(command[2])
+			if err != nil {
+				session.ChannelMessageSend(message.ChannelID, "Please enter a valid page number!")
+				return
+			}
+
+			if pageNumber < 1 || pageNumber > 2 {
+				session.ChannelMessageSend(message.ChannelID, "Please enter a valid page number!")
+				return
+			}
+
 			// Get Mary's avatar
 			mary, err := discordgo.New("Bot " + os.Getenv("TOKEN"))
 			if err != nil {
@@ -133,75 +203,99 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			}
 			maryAvatar := maryUser.AvatarURL("")
 
-			// Create a rich embed
-			embed := &discordgo.MessageEmbed{
-				Title: "Mary's Commands",
-				Color: 0xffc0cb,
-				Thumbnail: &discordgo.MessageEmbedThumbnail{
-					URL: maryAvatar,
-				},
-				Fields: []*discordgo.MessageEmbedField{{
-						Name: "mary help",
-						Value: "Shows all commands.",
-					},{
-						Name: "mary test",
-						Value: "Tests if Mary is online.",
-					},{
-						Name: "mary test connection",
-						Value: "Tests if Mary can connect to the database.",
-					},{
-						Name: "mary del [amount] (admin only)",
-						Value: "Deletes a set number of messages.",
-					},{
-						Name: "mary bankrupt @user (admin only)",
-						Value: "Reduces the user's balance to 0.",
-					},{
-						Name: "mary quote",
-						Value: "Shows a random quote.",
-					},{
-						Name: "mary profile [optional: @user]",
-						Value: "Shows your profile or a specified user's profile.",
-					},{
-						Name: "mary bal [optional: @user]",
-						Value: "Shows your balance or a specified user's balance.",
-					},{
-						Name: "mary inventory",
-						Value: "Shows your inventory.",
-					},{
-						Name: "mary shop [optional: page number]",
-						Value: "Shows the shop. You can also specify a page number.",
-					},{
-						Name: "mary buy [item name] [optional: amount]",
-						Value: "Buys the specified item. The default amount is 1.",
-					},{
-						Name: "mary sell [item name] [optional: amount]",
-						Value: "Sells the specified item at half the original price.",
-					},{
-						Name: "mary daily",
-						Value: "Gives you 100 coins.",
-					},{
-						Name: "mary pay/give @user [amount]",
-						Value: "Pays the mentioned user the specified amount of coins.",
-					},{
-						Name: "mary top/leaderboard",
-						Value: "Shows the top 10 users with the highest balance.",
-					},{
-						Name: "mary trivia [optional: amount]",
-						Value: "Starts a trivia game. Pays 50, 100, or 200 coins upon win depending on the difficulty. You can also gamble for 2X, 3X, 5X your bet.",
-					},{
-						Name: "mary gamble [amount]",
-						Value: "Gamble the specified amount of coins.",
-					},{
-						Name: "mary lottery [amount]",
-						Value: "Enter the lottery with 100 coins.",
-					},{
-						Name: "mary slots [amount]",
-						Value: "Play slots with 10 coins.",
+			if pageNumber == 1 {
+				// Create a rich embed
+				embed := &discordgo.MessageEmbed{
+					Title: "Mary's Commands",
+					Color: 0xffc0cb,
+					Thumbnail: &discordgo.MessageEmbedThumbnail{
+						URL: maryAvatar,
 					},
-				},
-			}
+					Fields: []*discordgo.MessageEmbedField{{
+							Name: "mary help [optional: page number]",
+							Value: "Shows all commands. The default page number is 1.",
+						},{
+							Name: "mary test",
+							Value: "Tests if Mary is online.",
+						},{
+							Name: "mary test connection",
+							Value: "Tests if Mary can connect to the database.",
+						},{
+							Name: "mary del [amount] (admin only)",
+							Value: "Deletes a set number of messages.",
+						},{
+							Name: "mary bankrupt @user (admin only)",
+							Value: "Reduces the user's balance to 0.",
+						},{
+							Name: "mary quote",
+							Value: "Shows a random quote.",
+						},{
+							Name: "mary profile [optional: @user]",
+							Value: "Shows your profile or a specified user's profile.",
+						},{
+							Name: "mary bal [optional: @user]",
+							Value: "Shows your balance or a specified user's balance.",
+						},{
+							Name: "mary inventory",
+							Value: "Shows your inventory.",
+						},{
+							Name: "mary use [item name] [@user] [optional: amount]",
+							Value: "Uses the specified item on the mentioned user. The default amount is 1.",
+						},
+					},
+					Footer: &discordgo.MessageEmbedFooter{
+						Text: "Page 1/2",
+					},
+				}
+				session.ChannelMessageSendEmbed(message.ChannelID, embed)
 			
-			session.ChannelMessageSendEmbed(message.ChannelID, embed)
+			} else if pageNumber == 2 {
+				// Create a rich embed
+				embed := &discordgo.MessageEmbed{
+					Title: "Mary's Commands",
+					Color: 0xffc0cb,
+					Thumbnail: &discordgo.MessageEmbedThumbnail{
+						URL: maryAvatar,
+					},
+					Fields: []*discordgo.MessageEmbedField{{
+							Name: "mary shop [optional: page number]",
+							Value: "Shows the shop. You can also specify a page number.",
+						},{
+							Name: "mary buy [item name] [optional: amount]",
+							Value: "Buys the specified item. The default amount is 1.",
+						},{
+							Name: "mary sell [item name] [optional: amount]",
+							Value: "Sells the specified item at half the original price.",
+						},{
+							Name: "mary daily",
+							Value: "Gives you 100 coins.",
+						},{
+							Name: "mary pay/give @user [amount]",
+							Value: "Pays the mentioned user the specified amount of coins.",
+						},{
+							Name: "mary top/leaderboard",
+							Value: "Shows the top 10 users with the highest balance.",
+						},{
+							Name: "mary trivia [optional: amount]",
+							Value: "Starts a trivia game. Pays 50, 100, or 200 coins upon win depending on the difficulty. You can also gamble for 2X, 3X, 5X your bet.",
+						},{
+							Name: "mary gamble [amount]",
+							Value: "Gamble the specified amount of coins.",
+						},{
+							Name: "mary lottery [amount]",
+							Value: "Enter the lottery with 100 coins.",
+						},{
+							Name: "mary slots [amount]",
+							Value: "Play slots with 10 coins.",
+						},
+					},
+					Footer: &discordgo.MessageEmbedFooter{
+						Text: "Page 2/2",
+					},
+				}
+				session.ChannelMessageSendEmbed(message.ChannelID, embed)	
+			}
+		}
 		
 		// mary profile -> shows your profile
 		case strings.ToLower(command[1]) == "profile":
