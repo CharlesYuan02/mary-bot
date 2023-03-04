@@ -23,7 +23,7 @@ type ShopItem struct {
 // Define the items for sale
 var items = []ShopItem{ // Global variables don't use :=, they use =
 	{"🔫 Gun", 2000, "It's a gun... what do you expect?"},
-	{"🚗 Car", 10000, "Run people over with this car!"},
+	{"🚗 Car", 50000, "Run people over with this car!"},
 	{"🍫 Chocolate", 50, "It won't help against the zombies, but everyone loves chocolate!"},
 	{"💍 Ring", 1000, "Congratulations! Who's the lucky person?"},
 	{"🏹 Bow", 400, "It might not be as strong as a gun, but it's cheaper!"},
