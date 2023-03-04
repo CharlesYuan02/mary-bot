@@ -97,7 +97,8 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 	}
 
 	// Only update the inventory if they're not using car - car has infinite uses
-	if item != "car" {
+	// Do not take away ring until you check that the pinged user isn't married
+	if item != "car" && item != "ring" {
 		// Update the user's inventory to reduce the amount of the item they have
 		user.Inventory[itemIndex].Quantity -= 1
 		if user.Inventory[itemIndex].Quantity == 0 { // If the user has no more of the item, remove it from their inventory
@@ -387,6 +388,161 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 			)
 			return "You shot <@" + strconv.Itoa(pingedUserID) + "> and took " + strconv.Itoa(int(robbedAmount)) + " coins from them!"
 		}
+	
+	case "ring": // You check if the user is married earlier in the function
+		// Check if the pinged user exists in the database
+		pingedUserCollection := client.Database(strconv.Itoa(guildID)).Collection("Users")
+		pingedUserFilter := bson.M{"guild_id": guildID, "user_id": pingedUserID}
+		var pingedUser User
+		err = pingedUserCollection.FindOne(ctx, pingedUserFilter).Decode(&pingedUser)
+		if err != nil {
+			fmt.Printf("That user is not currently playing the game!\n")
+			return "That user is not currently playing the game!"
+		}
+
+		// Check if the pinged user is married 
+		// If the married_to field is the user, then set married to true and return a different message
+		officiallyMarried := false
+		if pingedUser.MarriedTo != 0 && pingedUser.MarriedTo != userID {
+			return "That user is already married!"
+		} else if pingedUser.MarriedTo == userID {
+			officiallyMarried = true
+		}
+
+		// Check if the user is married
+		if user.MarriedTo != 0 {
+			return "You are already married!"
+		}
+
+		// Update the user's inventory to take away the ring
+		user.Inventory[itemIndex].Quantity -= 1
+		if user.Inventory[itemIndex].Quantity == 0 { // If the user has no more of the item, remove it from their inventory
+			user.Inventory = append(user.Inventory[:itemIndex], user.Inventory[itemIndex+1:]...)
+		}
+		_, err = userCollection.UpdateOne(
+			ctx,
+			bson.D{
+				{Key: "user_id", Value: userID},
+				{Key: "guild_id", Value: guildID},
+			},
+			bson.D{
+				{Key: "$set", Value: bson.D{
+					{Key: "inventory", Value: user.Inventory},
+					{Key: "married_to", Value: pingedUserID}, // Set the user's married_to field to the pinged user's ID
+				}},
+			},
+		)
+		if err != nil {
+			fmt.Printf("Error occurred while updating database! %s\n", err)
+			return "Error occurred while updating database! " + strings.Title(err.Error())
+		}
+
+		if officiallyMarried {
+			return "🎉 Congratulations! You and <@" + strconv.Itoa(pingedUserID) + "> are now officially married! 🎉"
+		} else {
+			return "You proposed to <@" + strconv.Itoa(pingedUserID) + "> with a ring! They now have to accept your proposal by using their own ring!"
+		}
 	}
 	return "" 
+}
+
+// Divorce is its own function because it doesn't use an item
+func Divorce(mongoURI string, guildID int, guildName string, userID int, userName string, pingedUserID int) (string) {
+	// Connect to MongoDB
+	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
+	if err != nil {
+		fmt.Printf("Error occurred creating MongoDB client! %s\n", err)
+		return "Error occurred creating MongoDB client! " + strings.Title(err.Error())
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // Timeout for connection is 10 secs
+	defer cancel() // Fix for memory leak
+	err = client.Connect(ctx)
+	if err != nil {
+		fmt.Printf("Error occurred while connecting to database! %s\n", err)
+		return "Error occurred while connecting to database! " + strings.Title(err.Error())
+	}
+
+	// Disconnect from database
+	defer client.Disconnect(ctx) // Occurs as last line of main() function
+
+	// Check if user exists in database
+	res := IsPlaying(ctx, client, guildID, guildName, userID, userName)
+	if res != "" {
+		return res
+	}
+
+	// Get user from database
+	userCollection := client.Database(strconv.Itoa(guildID)).Collection("Users")
+	filter := bson.M{"guild_id": guildID, "user_id": userID}
+	var user User // User struct defined in database.go
+	err = userCollection.FindOne(ctx, filter).Decode(&user)
+	if err != nil {
+		fmt.Printf("Error occurred while finding user in database! %s\n", err)
+		return "Error occurred while finding user in database! " + strings.Title(err.Error())
+	}
+
+	// Check if user is married
+	if user.MarriedTo == 0 {
+		return "You are not married!"
+	}
+
+	// Check if the pinged user exists in the database
+	pingedUserCollection := client.Database(strconv.Itoa(guildID)).Collection("Users")
+	pingedUserFilter := bson.M{"guild_id": guildID, "user_id": pingedUserID}
+	var pingedUser User
+	err = pingedUserCollection.FindOne(ctx, pingedUserFilter).Decode(&pingedUser)
+	if err != nil {
+		return "That user is not currently playing the game!"
+	}
+
+	// Check if the pinged user is married to the user
+	if user.MarriedTo != pingedUserID {
+		return "You are not married to that user!"
+	}
+
+	// Check if the pinged user is divorced
+	officiallyDivorced := false
+	if pingedUser.MarriedTo == 0 {
+		officiallyDivorced = true
+	}
+
+	// Add the ring back to the user's inventory if they don't have one
+	// If they do have one, increment the quantity by 1
+	itemIndex := -1
+	for i, item := range user.Inventory {
+		if item.Name == "ring" {
+			itemIndex = i
+		}
+	}
+	if itemIndex == -1 {
+		user.Inventory = append(user.Inventory, Item{Name: "ring", Quantity: 1})
+	} else {
+		user.Inventory[itemIndex].Quantity += 1
+	}
+
+	// Update the user's married_to field to 0 and give them the
+	_, err = userCollection.UpdateOne(
+		ctx,
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$set", Value: bson.D{
+				{Key: "inventory", Value: user.Inventory},
+				{Key: "married_to", Value: 0},
+			}},
+		},
+	)
+	if err != nil {
+		fmt.Printf("Error occurred while updating database! %s\n", err)
+		return "Error occurred while updating database! " + strings.Title(err.Error())
+	}
+
+	if officiallyDivorced {
+		return "The papers have gone through. You and <@" + strconv.Itoa(pingedUserID) + "> are now officially divorced..."
+	} else {
+		return "You filed for divorce with <@" + strconv.Itoa(pingedUserID) + ">! They now have to sign the papers to finalize the divorce."
+	}
 }

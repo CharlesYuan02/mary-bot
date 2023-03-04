@@ -16,7 +16,7 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/bwmarrin/discordgo"
-	//"github.com/joho/godotenv"
+	// "github.com/joho/godotenv"
 )
 
 func main() {
@@ -912,6 +912,29 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "bow", pingedUserID)
 				session.ChannelMessageSend(message.ChannelID, res)
 			}
+			case "ring": { // mary use ring @target
+				// Check if the user has specified a target
+				if len(words) < 4 {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a target!")
+					break
+				}
+				pingedUser := strings.Trim(command[len(words)-1], "<@!>") // Get the target
+				if pingedUser == "" {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+					break
+				}
+				pingedUserID, err := strconv.Atoi(pingedUser)
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+					break
+				}
+				if pingedUserID == userID {
+					session.ChannelMessageSend(message.ChannelID, "You can't marry yourself!")
+					break
+				}
+				res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "ring", pingedUserID)
+				session.ChannelMessageSend(message.ChannelID, res)
+			}
 		}
 
 		case strings.ToLower(command[1]) == "eat": {
@@ -1002,6 +1025,54 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				break
 			}
 			res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "gun", pingedUserID)
+			session.ChannelMessageSend(message.ChannelID, res)
+		}
+
+		case strings.ToLower(command[1]) == "marry": {
+			// Check if the user has specified a target
+			if len(command) < 3 {
+				session.ChannelMessageSend(message.ChannelID, "Please specify a target!")
+				break
+			}
+			pingedUser := strings.Trim(command[2], "<@!>")
+			if pingedUser == "" {
+				session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+				break
+			}
+			pingedUserID, err := strconv.Atoi(pingedUser)
+			if err != nil {
+				session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+				break
+			}
+			if pingedUserID == userID {
+				session.ChannelMessageSend(message.ChannelID, "You can't marry yourself!")
+				break
+			}
+			res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "ring", pingedUserID)
+			session.ChannelMessageSend(message.ChannelID, res)
+		}
+
+		case strings.ToLower(command[1]) == "divorce": {
+			// Check if the user has specified a target
+			if len(command) < 3 {
+				session.ChannelMessageSend(message.ChannelID, "Please specify a target!")
+				break
+			}
+			pingedUser := strings.Trim(command[2], "<@!>")
+			if pingedUser == "" {
+				session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+				break
+			}
+			pingedUserID, err := strconv.Atoi(pingedUser)
+			if err != nil {
+				session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+				break
+			}
+			if pingedUserID == userID {
+				session.ChannelMessageSend(message.ChannelID, "You can't marry yourself!")
+				break
+			}
+			res := database.Divorce(MONGO_URI, guildID, guildName, userID, userName, pingedUserID)
 			session.ChannelMessageSend(message.ChannelID, res)
 		}
 

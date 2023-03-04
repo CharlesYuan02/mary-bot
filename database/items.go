@@ -45,6 +45,7 @@ type User struct {
 	GuildID  int    `bson:"guild_id"`
 	Balance  int64  `bson:"balance"`
 	LastUse  time.Time `bson:"last_use"`
+	MarriedTo int `bson:"married_to"`
 	Inventory []Item `bson:"inventory"`
 }
 
