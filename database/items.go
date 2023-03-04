@@ -496,11 +496,6 @@ func Give(mongoURI string, guildID int, guildName string, userID int, userName s
 		fmt.Printf("Error occurred while updating database! %s\n", err)
 		return "Error occurred while updating database! " + strings.Title(err.Error())
 	}
-	_, err = userCollection.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"inventory": user.Inventory}})
-	if err != nil {
-		fmt.Printf("Error occurred while updating user's inventory! %s\n", err)
-		return "Error occurred while updating user's inventory! " + strings.Title(err.Error())
-	}
 
 	// Update pinged user's inventory
 	pingedUserCollection := client.Database(strconv.Itoa(guildID)).Collection("Users")
