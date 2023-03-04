@@ -61,12 +61,12 @@ func IsPlaying(ctx context.Context, client *mongo.Client, guildID int, guildName
 
 // mary profile
 // This is not integrated into Economy because it returns multiple values
-func GetProfile(mongoURI string, guildID int, guildName string, userID int, userName string) (string, int64, string, int) {
+func GetProfile(mongoURI string, guildID int, guildName string, userID int, userName string) (string, int64, string, int, string) {
 	// Connect to MongoDB
 	client, err := mongo.NewClient(options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		fmt.Printf("Error occurred creating MongoDB client! %s\n", err)
-		return "Error occurred creating MongoDB client! " + strings.Title(err.Error()), 0, "", 0
+		return "Error occurred creating MongoDB client! " + strings.Title(err.Error()), 0, "", 0, ""
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // Timeout for connection is 10 secs
@@ -74,7 +74,7 @@ func GetProfile(mongoURI string, guildID int, guildName string, userID int, user
 	err = client.Connect(ctx)
 	if err != nil {
 		fmt.Printf("Error occurred while connecting to database! %s\n", err)
-		return "Error occurred while connecting to database! " + strings.Title(err.Error()), 0, "", 0
+		return "Error occurred while connecting to database! " + strings.Title(err.Error()), 0, "", 0, ""
 	}
 
 	// Disconnect from database
@@ -83,7 +83,7 @@ func GetProfile(mongoURI string, guildID int, guildName string, userID int, user
 	// Check if user is playing
 	res := IsPlaying(ctx, client, guildID, guildName, userID, userName)
 	if res != "" {
-		return res, 0, "", 0
+		return res, 0, "", 0, ""
 	}
 
 	// Find user in database
@@ -104,6 +104,23 @@ func GetProfile(mongoURI string, guildID int, guildName string, userID int, user
 	bal := collectionResult.Lookup("balance").Int64()
 	serverName := collectionResult.Lookup("guild_name").StringValue()
 	lastDaily := collectionResult.Lookup("last_daily").DateTime()
+	marriedTo := collectionResult.Lookup("married_to").Int64()
+	spouse := "None"
+
+	// Find the userName of the user they're married to
+	if marriedTo != 0 {
+		collectionResult, err = userCollection.FindOne(
+			ctx,
+			bson.D{
+				{Key: "user_id", Value: marriedTo},
+				{Key: "guild_id", Value: guildID},
+			},
+		).DecodeBytes()
+		if err != nil {
+			return "Error occurred while selecting from database! " + strings.Title(err.Error()), 0, "", 0, ""
+		}
+		spouse = collectionResult.Lookup("user_name").StringValue()
+	}
 
 	// Calculate the duration since lastDaily
 	durationSinceLastDaily := time.Since(time.Unix(lastDaily/1000, 0))
@@ -119,7 +136,7 @@ func GetProfile(mongoURI string, guildID int, guildName string, userID int, user
 		hoursUntilNextDaily = 0
 	}
 
-	return user, bal, serverName, hoursUntilNextDaily
+	return user, bal, serverName, hoursUntilNextDaily, spouse
 }
 
 // mary bal

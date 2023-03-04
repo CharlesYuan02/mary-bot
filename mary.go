@@ -16,16 +16,16 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/bwmarrin/discordgo"
-	// "github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	// Load token from env vars
-	// envErr := godotenv.Load(".env")
-	// if envErr != nil {
-	// 	fmt.Printf("Error loading environment variables! %s\n", envErr)
-	// 	return
-	// }
+	envErr := godotenv.Load(".env")
+	if envErr != nil {
+		fmt.Printf("Error loading environment variables! %s\n", envErr)
+		return
+	}
 	TOKEN := os.Getenv("TOKEN")
 	if TOKEN == "" {
 		fmt.Println("Token not found!")
@@ -342,6 +342,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			var serverName string
 			var timeLeft int
 			var avatarURL string
+			var spouse string
 
 			// If user mentions another user, get their profile
 			if len(message.Mentions) > 0 {
@@ -351,7 +352,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				mentionedUserName := mentionedUser.Username
 
 				// Get mentioned user's profile
-				user, bal, serverName, timeLeft = database.GetProfile(MONGO_URI, guildID, guildName, mentionedUserID, mentionedUserName)
+				user, bal, serverName, timeLeft, spouse = database.GetProfile(MONGO_URI, guildID, guildName, mentionedUserID, mentionedUserName)
 
 				// If the user variable returns the string "That person is not currently playing the game!"
 				// Then return an error message
@@ -369,7 +370,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				// Get username 
 				userName := message.Author.Username
 				// Get user's profile
-				user, bal, serverName, timeLeft = database.GetProfile(MONGO_URI, guildID, guildName, userID, userName)
+				user, bal, serverName, timeLeft, spouse = database.GetProfile(MONGO_URI, guildID, guildName, userID, userName)
 
 				if user == "That person is not currently playing the game!" {
 					session.ChannelMessageSend(message.ChannelID, "You are not currently playing the game!")
@@ -408,6 +409,11 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 					{
 						Name: "Server",
 						Value: serverName,
+						Inline: true,
+					},
+					{
+						Name: "Married To",
+						Value: spouse,
 						Inline: true,
 					},
 					{

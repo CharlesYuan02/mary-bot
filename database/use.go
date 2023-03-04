@@ -428,7 +428,7 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 			bson.D{
 				{Key: "$set", Value: bson.D{
 					{Key: "inventory", Value: user.Inventory},
-					{Key: "married_to", Value: pingedUserID}, // Set the user's married_to field to the pinged user's ID
+					{Key: "married_to", Value: int64(pingedUserID)}, // Set the user's married_to field to the pinged user's ID
 				}},
 			},
 		)
@@ -531,7 +531,7 @@ func Divorce(mongoURI string, guildID int, guildName string, userID int, userNam
 		bson.D{
 			{Key: "$set", Value: bson.D{
 				{Key: "inventory", Value: user.Inventory},
-				{Key: "married_to", Value: 0},
+				{Key: "married_to", Value: int64(0)},
 			}},
 		},
 	)
