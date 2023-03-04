@@ -102,5 +102,8 @@ Portfolio will display the user's current stock porfolio, the value of each stoc
 ### MaryPortfolio
 A school project I am doing is a sentiment analysis stock trader, which I plan on turning into an API. I will let Mary have her own trading portfolio using the API for buy and sell suggestions.
 
+## Demo
+<img src="https://github.com/Chubbyman2/mary-bot/blob/main/docs/demo-2.PNG">
+
 ## License
 This project is licensed under the MIT License - see the <a href="https://github.com/Chubbyman2/mary-bot/blob/main/LICENSE">LICENSE</a> file for details.
