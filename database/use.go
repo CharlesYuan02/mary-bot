@@ -236,7 +236,7 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 				fmt.Printf("Error occurred while updating database! %s\n", err)
 				return "Error occurred while updating database! " + strings.Title(err.Error())
 			}
-			return "You tried to rob <@" + strconv.Itoa(pingedUserID) + "> with a bow, but they had a gun and shot you! You lost " + strconv.Itoa(int(robbedAmount)) + " coins!"
+			return "You tried to rob <@" + strconv.Itoa(pingedUserID) + "> with a bow, but they had a gun and shot you! You lost " + strconv.Itoa(int(lostAmount)) + " coins!"
 		
 		} else {
 			_, err = pingedUserCollection.UpdateOne(
