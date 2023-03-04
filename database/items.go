@@ -64,8 +64,8 @@ func Shop(session *discordgo.Session, message *discordgo.MessageCreate, pageSize
 	// Check if the currentPage is out of bounds
 	if currentPage < 0 {
 		currentPage = 0
-	} else if currentPage > len(items)/pageSize {
-		currentPage = len(items) / pageSize
+	} else if currentPage >= len(items)/pageSize {
+		currentPage = len(items) / pageSize - 1
 	}
 
     // Create a function to get the items for the current page
@@ -84,7 +84,7 @@ func Shop(session *discordgo.Session, message *discordgo.MessageCreate, pageSize
         Title: "Shop",
         Color: 0xffc0cb,
         Footer: &discordgo.MessageEmbedFooter{
-            Text: fmt.Sprintf("Page %d of %d", currentPage+1, len(items)/pageSize+1),
+            Text: fmt.Sprintf("Page %d of %d", currentPage+1, len(items)/pageSize),
         },
     }
 
