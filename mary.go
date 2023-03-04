@@ -16,16 +16,16 @@ import (
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/bwmarrin/discordgo"
-	//"github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 )
 
 func main() {
 	// Load token from env vars
-	// envErr := godotenv.Load(".env")
-	// if envErr != nil {
-	// 	fmt.Printf("Error loading environment variables! %s\n", envErr)
-	// 	return
-	// }
+	envErr := godotenv.Load(".env")
+	if envErr != nil {
+		fmt.Printf("Error loading environment variables! %s\n", envErr)
+		return
+	}
 	TOKEN := os.Getenv("TOKEN")
 	if TOKEN == "" {
 		fmt.Println("Token not found!")
@@ -499,7 +499,25 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			} else if len(command) < 4 {
 				session.ChannelMessageSend(message.ChannelID, "Please specify an item to give!")
 				break
-			} else if len(command) < 5 {
+			} 
+			words := strings.Fields(message.Content)
+			lastWord := words[len(words)-1] // Check if amount specified is an integer (should be last argument)
+			if num, err := strconv.Atoi(lastWord); err == nil {
+				// If the last word is an integer, assume the user wants to buy that many of the item
+				amount := num
+				item := strings.Join(command[3:len(command)-1], " ")
+				pingedUser := strings.Trim(command[2], "<@!>")
+				pingedUserID, err := strconv.Atoi(pingedUser)
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Error occurred while getting user ID!" + strings.Title(err.Error()))
+				}
+				if pingedUserID == userID {
+					session.ChannelMessageSend(message.ChannelID, "You can't give yourself an item!")
+					break
+				}
+				res := database.Give(MONGO_URI, guildID, guildName, userID, userName, item, amount, pingedUserID)
+				session.ChannelMessageSend(message.ChannelID, res)
+			} else {
 				// Assume amount to give is 1
 				amount := 1
 				item := strings.Join(command[3:], " ")
@@ -514,25 +532,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				}
 				res := database.Give(MONGO_URI, guildID, guildName, userID, userName, item, amount, pingedUserID)
 				session.ChannelMessageSend(message.ChannelID, res)
-			} else {
-				// Assume amount to give is specified
-				amount, err := strconv.Atoi(command[len(command)-1])
-				if err != nil {
-					session.ChannelMessageSend(message.ChannelID, "Please enter a valid amount to give!")
-				}
-				item := strings.Join(command[3:len(command)-1], " ")
-				pingedUser := strings.Trim(command[2], "<@!>")
-				pingedUserID, err := strconv.Atoi(pingedUser)
-				if err != nil {
-					session.ChannelMessageSend(message.ChannelID, "Error occurred while getting user ID!" + strings.Title(err.Error()))
-				}
-				if pingedUserID == userID {
-					session.ChannelMessageSend(message.ChannelID, "You can't give yourself an item!")
-					break
-				}
-				res := database.Give(MONGO_URI, guildID, guildName, userID, userName, item, amount, pingedUserID)
-				session.ChannelMessageSend(message.ChannelID, res)
-			}	
+			}
 
 		// mary shop -> shows shop
 		case strings.ToLower(command[1]) == "shop":
@@ -861,7 +861,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 					session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
 					break
 				}
-				// Make sure the user doesn't use the gun on themselves
+				// Make sure the user doesn't use the bow on themselves
 				if pingedUserID == userID {
 					session.ChannelMessageSend(message.ChannelID, "You can't rob yourself!")
 					break

@@ -67,6 +67,9 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 			}
 		}
 	}
+	if itemIndex == -1 {
+		return "You do not have that item in your inventory!"
+	}
 
 	// Check if the user has waited a minute since their last use indicated by last_use
 	// If the user has not waited a minute, return an error
@@ -95,26 +98,24 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 
 	// Update the user's inventory to reduce the amount of the item they have
 	user.Inventory[itemIndex].Quantity -= 1
-	if user.Inventory[itemIndex].Quantity == 0 {
+	if user.Inventory[itemIndex].Quantity == 0 { // If the user has no more of the item, remove it from their inventory
 		user.Inventory = append(user.Inventory[:itemIndex], user.Inventory[itemIndex+1:]...)
 	}
 	_, err = userCollection.UpdateOne(
 		ctx,
-		filter,
-		bson.M{
-			"$set": bson.M{
-				"inventory": user.Inventory,
-			},
+		bson.D{
+			{Key: "user_id", Value: userID},
+			{Key: "guild_id", Value: guildID},
+		},
+		bson.D{
+			{Key: "$set", Value: bson.D{
+				{Key: "inventory", Value: user.Inventory},
+			}},
 		},
 	)
 	if err != nil {
 		fmt.Printf("Error occurred while updating database! %s\n", err)
 		return "Error occurred while updating database! " + strings.Title(err.Error())
-	}
-	_, err = userCollection.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"inventory": user.Inventory}})
-	if err != nil {
-		fmt.Printf("Error occurred while updating user's inventory! %s\n", err)
-		return "Error occurred while updating user's inventory! " + strings.Title(err.Error())
 	}
 	
 	// Check what the item is
@@ -130,12 +131,7 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 			fmt.Printf("That user is not currently playing the game!\n")
 			return "That user is not currently playing the game!"
 		}
-
-		// Check if the pinged user has enough money to rob
 		pingedUserBalance := pingedUser.Balance
-		if pingedUserBalance < 100 {
-			return "That user does not have enough money for you to rob!"
-		}
 
 		// Otherwise, get the pinged user balance and rob them for a random percentage amount
 		robbedAmount := int64(float64(pingedUserBalance) * (rand.Float64() * 0.5 + 0.1)) // Random percentage between 10% and 60%
@@ -169,7 +165,6 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 				}},
 			},
 		)
-
 		return "You held up <@" + strconv.Itoa(pingedUserID) + "> at gunpoint and robbed " + strconv.Itoa(int(robbedAmount)) + " coins from them!"
 
 	case "bow":
@@ -182,19 +177,14 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 			fmt.Printf("That user is not currently playing the game!\n")
 			return "That user is not currently playing the game!"
 		}
-
-		// Check if the pinged user has enough money to rob
 		pingedUserBalance := pingedUser.Balance
-		if pingedUserBalance < 100 {
-			return "That user does not have enough money for you to rob!"
-		}
 
 		// Check if the pinged user has a gun
 		pingedUserInventory := pingedUser.Inventory
-		hasGun := false
-		for _, item := range pingedUserInventory {
+		gunIndex := -1
+		for index, item := range pingedUserInventory {
 			if item.Name == "gun" {
-				hasGun = true
+				gunIndex = index
 				break
 			}
 		}
@@ -203,7 +193,7 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 		lostAmount := int64(float64(user.Balance) * (rand.Float64() * 0.1 + 0.1)) // Random percentage between 10% and 20% for you to lose
 
 		// If the pinged user has a gun, then they you lost a percentage of your balance
-		if hasGun {
+		if gunIndex != -1 {
 			_, err = userCollection.UpdateOne(
 				ctx,
 				bson.D{
@@ -221,7 +211,34 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 				return "Error occurred while updating database! " + strings.Title(err.Error())
 			}
 
-			// Reduce the pinged user's item amount by 1
+			// Reduce the pinged user's gun quantity by 1
+			pingedUser.Inventory[gunIndex].Quantity -= 1
+
+			// If the pinged user's gun quantity is 0, then remove it from their inventory
+			if pingedUser.Inventory[gunIndex].Quantity == 0 {
+				pingedUser.Inventory = append(pingedUser.Inventory[:gunIndex], pingedUser.Inventory[gunIndex+1:]...)
+			}
+			
+			// Update the pinged user's inventory
+			_, err = pingedUserCollection.UpdateOne(
+				ctx,
+				bson.D{
+					{Key: "user_id", Value: pingedUserID},
+					{Key: "guild_id", Value: guildID},
+				},
+				bson.D{
+					{Key: "$set", Value: bson.D{
+						{Key: "inventory", Value: pingedUser.Inventory},
+					}},
+				},
+			)
+			if err != nil {
+				fmt.Printf("Error occurred while updating database! %s\n", err)
+				return "Error occurred while updating database! " + strings.Title(err.Error())
+			}
+			return "You tried to rob <@" + strconv.Itoa(pingedUserID) + "> with a bow, but they had a gun and shot you! You lost " + strconv.Itoa(int(robbedAmount)) + " coins!"
+		
+		} else {
 			_, err = pingedUserCollection.UpdateOne(
 				ctx,
 				bson.D{
@@ -230,7 +247,7 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 				},
 				bson.D{
 					{Key: "$inc", Value: bson.D{ // Remember that $dec is not a thing
-						{Key: "inventory.$.amount", Value: -1},
+						{Key: "balance", Value: -robbedAmount}, // Decrement the balance by the robbed amount
 					}},
 				},
 			)
@@ -238,42 +255,22 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 				fmt.Printf("Error occurred while updating database! %s\n", err)
 				return "Error occurred while updating database! " + strings.Title(err.Error())
 			}
-			
-			return "You tried to rob <@" + strconv.Itoa(pingedUserID) + "> with a bow, but they had a gun and shot you! You lost " + strconv.Itoa(int(robbedAmount)) + " coins!"
-		} else {
-		_, err = pingedUserCollection.UpdateOne(
-			ctx,
-			bson.D{
-				{Key: "user_id", Value: pingedUserID},
-				{Key: "guild_id", Value: guildID},
-			},
-			bson.D{
-				{Key: "$inc", Value: bson.D{ // Remember that $dec is not a thing
-					{Key: "balance", Value: -robbedAmount}, // Decrement the balance by the robbed amount
-				}},
-			},
-		)
-		if err != nil {
-			fmt.Printf("Error occurred while updating database! %s\n", err)
-			return "Error occurred while updating database! " + strings.Title(err.Error())
+
+			// Update the user's balance
+			_, err = userCollection.UpdateOne(
+				ctx,
+				bson.D{
+					{Key: "user_id", Value: userID},
+					{Key: "guild_id", Value: guildID},
+				},
+				bson.D{
+					{Key: "$inc", Value: bson.D{ 
+						{Key: "balance", Value: robbedAmount}, // Increment the balance by the robbed amount
+					}},
+				},
+			)
+			return "You shot <@" + strconv.Itoa(pingedUserID) + "> and took " + strconv.Itoa(int(robbedAmount)) + " coins from them!"
 		}
-
-		// Update the user's balance
-		_, err = userCollection.UpdateOne(
-			ctx,
-			bson.D{
-				{Key: "user_id", Value: userID},
-				{Key: "guild_id", Value: guildID},
-			},
-			bson.D{
-				{Key: "$inc", Value: bson.D{ 
-					{Key: "balance", Value: robbedAmount}, // Increment the balance by the robbed amount
-				}},
-			},
-		)
-
-		return "You shot <@" + strconv.Itoa(pingedUserID) + "> and took " + strconv.Itoa(int(robbedAmount)) + " coins from them!"
-	}
 	}
 	return "" 
 }
