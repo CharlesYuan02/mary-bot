@@ -96,31 +96,110 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 		return "Error occurred while updating database! " + strings.Title(err.Error())
 	}
 
-	// Update the user's inventory to reduce the amount of the item they have
-	user.Inventory[itemIndex].Quantity -= 1
-	if user.Inventory[itemIndex].Quantity == 0 { // If the user has no more of the item, remove it from their inventory
-		user.Inventory = append(user.Inventory[:itemIndex], user.Inventory[itemIndex+1:]...)
-	}
-	_, err = userCollection.UpdateOne(
-		ctx,
-		bson.D{
-			{Key: "user_id", Value: userID},
-			{Key: "guild_id", Value: guildID},
-		},
-		bson.D{
-			{Key: "$set", Value: bson.D{
-				{Key: "inventory", Value: user.Inventory},
-			}},
-		},
-	)
-	if err != nil {
-		fmt.Printf("Error occurred while updating database! %s\n", err)
-		return "Error occurred while updating database! " + strings.Title(err.Error())
+	// Only update the inventory if they're not using car - car has infinite uses
+	if item != "car" {
+		// Update the user's inventory to reduce the amount of the item they have
+		user.Inventory[itemIndex].Quantity -= 1
+		if user.Inventory[itemIndex].Quantity == 0 { // If the user has no more of the item, remove it from their inventory
+			user.Inventory = append(user.Inventory[:itemIndex], user.Inventory[itemIndex+1:]...)
+		}
+		_, err = userCollection.UpdateOne(
+			ctx,
+			bson.D{
+				{Key: "user_id", Value: userID},
+				{Key: "guild_id", Value: guildID},
+			},
+			bson.D{
+				{Key: "$set", Value: bson.D{
+					{Key: "inventory", Value: user.Inventory},
+				}},
+			},
+		)
+		if err != nil {
+			fmt.Printf("Error occurred while updating database! %s\n", err)
+			return "Error occurred while updating database! " + strings.Title(err.Error())
+		}
 	}
 	
 	// Check what the item is
 	// The check for whether a pingedUser exists is done in mary.go
 	switch item {
+	case "chocolate":
+		// Set a 1% chance that they will win 1000000 coins
+		winChance := rand.Intn(100)
+		if winChance < 1 {
+			user.Balance += 1000000
+			_, err = userCollection.UpdateOne(
+				ctx,
+				bson.D{
+					{Key: "user_id", Value: userID},
+					{Key: "guild_id", Value: guildID},
+				},
+				bson.D{
+					{Key: "$set", Value: bson.D{
+						{Key: "balance", Value: user.Balance},
+					}},
+				},
+			)
+			if err != nil {
+				fmt.Printf("Error occurred while updating database! %s\n", err)
+				return "Error occurred while updating database! " + strings.Title(err.Error())
+			}
+			return "You found a golden ticket! You won 1000000 coins!"
+		}
+		// Otherwise, just return a normal message
+		return "You ate some chocolate. Yum!"
+		
+	case "car":
+		// Check if the pinged user is rich enough
+		pingedUserCollection := client.Database(strconv.Itoa(guildID)).Collection("Users")
+		pingedUserFilter := bson.M{"guild_id": guildID, "user_id": pingedUserID}
+		var pingedUser User
+		err = pingedUserCollection.FindOne(ctx, pingedUserFilter).Decode(&pingedUser)
+		if err != nil {
+			fmt.Printf("That user is not currently playing the game!\n")
+			return "That user is not currently playing the game!"
+		}
+		pingedUserBalance := pingedUser.Balance
+		if pingedUserBalance < 1000 {
+			return "You ran over <@" + strconv.Itoa(pingedUserID) + "> with your car, but they didn't have enough money to pay you!"
+		}
+
+		// Otherwise, take 1000 coins from the pinged user and give them to the user
+		_, err = userCollection.UpdateOne(
+			ctx,
+			bson.D{
+				{Key: "user_id", Value: userID},
+				{Key: "guild_id", Value: guildID},
+			},
+			bson.D{
+				{Key: "$inc", Value: bson.D{
+					{Key: "balance", Value: 1000},
+				}},
+			},
+		)
+		if err != nil {
+			fmt.Printf("Error occurred while updating database! %s\n", err)
+			return "Error occurred while updating database! " + strings.Title(err.Error())
+		}
+		_, err = pingedUserCollection.UpdateOne(
+			ctx,
+			bson.D{
+				{Key: "user_id", Value: pingedUserID},
+				{Key: "guild_id", Value: guildID},
+			},
+			bson.D{
+				{Key: "$inc", Value: bson.D{
+					{Key: "balance", Value: -1000},
+				}},
+			},
+		)
+		if err != nil {
+			fmt.Printf("Error occurred while updating database! %s\n", err)
+			return "Error occurred while updating database! " + strings.Title(err.Error())
+		}
+		return "You ran over <@" + strconv.Itoa(pingedUserID) + "> with your car and took 1000 coins from them!"
+
 	case "gun": 
 		// Check if the pinged user exists in the database
 		pingedUserCollection := client.Database(strconv.Itoa(guildID)).Collection("Users")

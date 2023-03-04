@@ -821,6 +821,34 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 			words := strings.Fields(message.Content)
 			item := strings.ToLower(words[2])
 			switch item {
+			case "chocolate": { // mary use chocolate 
+				res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "chocolate", 0)
+				session.ChannelMessageSend(message.ChannelID, res)
+			}
+			case "car": { // mary use car @target
+				// Check if the user has specified a target
+				if len(words) < 4 {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a target!")
+					break
+				}
+				pingedUser := strings.Trim(command[len(words)-1], "<@!>") // Get the target
+				if pingedUser == "" {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+					break
+				}
+				pingedUserID, err := strconv.Atoi(pingedUser)
+				if err != nil {
+					session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
+					break
+				}
+				// Make sure the user doesn't use the car on themselves
+				if pingedUserID == userID {
+					session.ChannelMessageSend(message.ChannelID, "You can't run yourself over!")
+					break
+				}
+				res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "car", pingedUserID)
+				session.ChannelMessageSend(message.ChannelID, res)
+			}
 			case "gun": { // mary use gun @target
 				// Check if the user has specified a target
 				if len(words) < 4 {
