@@ -320,6 +320,9 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 					},{
 						Name: "mary marry [@user]",
 						Value: "Give the mentioned user a ring. If they give you one back, congratulations! You're married!",
+					},{
+						Name: "mary divorce [@user]",
+						Value: "Divorce the mentioned user. You must be married to them or have proposed to them. Gives you back one ring.",
 					},
 				},
 				Footer: &discordgo.MessageEmbedFooter{
