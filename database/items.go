@@ -24,9 +24,10 @@ type ShopItem struct {
 var items = []ShopItem{ // Global variables don't use :=, they use =
 	{"🔫 Gun", 2000, "It's a gun... what do you expect?"},
 	{"🚗 Car", 10000, "Run people over with this car!"},
-	{"🍫 Chocolate", 50, "A great gift to give to a friend... or enemy."},
+	{"🍫 Chocolate", 50, "It won't help against the zombies, but everyone loves chocolate!"},
 	{"💍 Ring", 1000, "Congratulations! Who's the lucky person?"},
 	{"🏹 Bow", 400, "It might not be as strong as a gun, but it's cheaper!"},
+	{"🛡️ Shield", 5000, "Protect yourself from the attackers!"},
 }
 
 // Lookup table for emojis
@@ -36,6 +37,7 @@ var emojiLookup = map[string]string{
 	"Chocolate": "🍫",
 	"Ring": "💍",
 	"Bow": "🏹",
+	"Shield": "🛡️",
 }
 
 type User struct {
@@ -159,7 +161,7 @@ func Buy(mongoURI string, guildID int, guildName string, userID int, userName st
 	for i := range items {
 		// Ignore the first character of the item name because it is a unicode emoji
 		// Second character is a space
-		pattern := regexp.MustCompile(`^\p{So}|\s`)
+		pattern := regexp.MustCompile("[^a-zA-Z0-9]+")
 		if strings.ToLower(pattern.ReplaceAllString(items[i].Name, "")) == item {
 			itemPrice = items[i].Price
 			break
@@ -537,6 +539,5 @@ func Give(mongoURI string, guildID int, guildName string, userID int, userName s
 			return "Error occurred while updating pinged user's inventory! " + strings.Title(err.Error())
 		}
 	}
-
 	return fmt.Sprintf("You gave %dX %s to <@%d>!", amount, item, pingedUser)
 }

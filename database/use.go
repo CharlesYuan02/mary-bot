@@ -133,6 +133,43 @@ func Use(mongoURI string, guildID int, guildName string, userID int, userName st
 		}
 		pingedUserBalance := pingedUser.Balance
 
+		// Check if the pinged user has a shield
+		pingedUserInventory := pingedUser.Inventory
+		shieldIndex := -1
+		for index, item := range pingedUserInventory {
+			if item.Name == "shield" {
+				shieldIndex = index
+				break
+			}
+		}
+
+		if shieldIndex != -1 {
+			// Reduce the pinged user's shield quantity by 1
+			pingedUser.Inventory[shieldIndex].Quantity -= 1
+
+			// If the pinged user has no more shields, remove the shield from their inventory
+			if pingedUser.Inventory[shieldIndex].Quantity == 0 {
+				pingedUser.Inventory = append(pingedUser.Inventory[:shieldIndex], pingedUser.Inventory[shieldIndex+1:]...)
+			}
+			_, err = pingedUserCollection.UpdateOne(
+				ctx,
+				bson.D{
+					{Key: "user_id", Value: pingedUserID},
+					{Key: "guild_id", Value: guildID},
+				},
+				bson.D{
+					{Key: "$set", Value: bson.D{
+						{Key: "inventory", Value: pingedUserInventory},
+					}},
+				},
+			)
+			if err != nil {
+				fmt.Printf("Error occurred while updating database! %s\n", err)
+				return "Error occurred while updating database! " + strings.Title(err.Error())
+			}
+			return "You shot <@" + strconv.Itoa(pingedUserID) + "> with your gun, but they had a shield and it blocked the bullet!"
+		}
+
 		// Otherwise, get the pinged user balance and rob them for a random percentage amount
 		robbedAmount := int64(float64(pingedUserBalance) * (rand.Float64() * 0.5 + 0.1)) // Random percentage between 10% and 60%
 		_, err = pingedUserCollection.UpdateOne(
