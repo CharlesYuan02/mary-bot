@@ -76,9 +76,6 @@ $ tmux a -t [id]
 $ tmux kill-session
 ```
 
-## Demo
-<img src="https://github.com/Chubbyman2/mary-bot/blob/main/docs/demo-1.PNG">
-
 ## Built With
 ### DiscordGo
 <a href="https://github.com/bwmarrin/discordgo">DiscordGo</a> is a Go package that provides low level bindings to the Discord chat client API. DiscordGo has nearly complete support for all of the Discord API endpoints, websocket interface, and voice interface. The backbone for this entire project.
@@ -89,15 +86,21 @@ The <a href="https://github.com/mongodb/mongo-go-driver">MongoDB Go Driver</a> a
 ### Google Cloud + tmux
 <a href="https://cloud.google.com/">Google Cloud</a>'s Compute Engine provides me with a virtual machine instance that I can ssh into, download my dependencies, and host Mary from. I then used <a href="https://en.wikipedia.org/wiki/Tmux">tmux</a> to run the code in the background, so that when I close the secure shell window, Mary keeps running.
 
+## Update March 4, 2023
+My GCP trial ran out, so I've switched to using <a href="https://railway.app/">Railway</a>. I've also been working for the past two weeks on more economy functions. This includes trivia, inventory, shop, give (an item, not coins), buy, sell, and five different use commands. The help, trivia, inventory, shop, and profile commands are all sent as rich embeds now, too! Feel free to try them out.
+
 ## Future Plans
-### Shop and Items
-Players can get coins, but so what? That's why I want to integrate a shop with custom items that can be bought and used for specific purposes.
+### StockInfo
+Basically, I want to add a basic stock trading feature to Mary. No stops or limits, just buy and sell using the Yahoo Finance API. The implementation will be similar to what I did with trivia (API call) and inventory (portfolio of stocks). StockInfo will retrieve the current value of the stock along with other relevant information. 
 
-### Profile and Inventory
-Players should also be able to see their stats on a custom profile message, along with the items in their inventory that they bought from the shop. This will be a nice extension of what I'm currently doing with MongoDB.
+### BuyStock, SellStock
+Buy and sell a stock at the market price.
 
-### Rich Embeds
-In order to display shop, items, profile, inventory and outputs of other commands such as help and leaderboard, I want to integrate rich embeds. 
+### Portfolio
+Portfolio will display the user's current stock porfolio, the value of each stock currently, the original purchase price, and the overall performance.
+
+### MaryPortfolio
+A school project I am doing is a sentiment analysis stock trader, which I plan on turning into an API. I will let Mary have her own trading portfolio using the API for buy and sell suggestions.
 
 ## License
 This project is licensed under the MIT License - see the <a href="https://github.com/Chubbyman2/mary-bot/blob/main/LICENSE">LICENSE</a> file for details.
