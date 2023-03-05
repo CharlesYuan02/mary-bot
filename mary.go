@@ -316,7 +316,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 						Value: "Shoot the mentioned user with the bow. Consumes one bow item.",
 					},{
 						Name: "mary kill [@user]",
-						Value: "Shoot the mentioned user with the gun. Consumes one gun item",
+						Value: "Shoot the mentioned user with the gun. Consumes one gun item.",
 					},{
 						Name: "mary marry [@user]",
 						Value: "Give the mentioned user a ring. If they give you one back, congratulations! You're married!",
