@@ -313,7 +313,7 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 						Value: "Run over the mentioned user. Does not use up car item.",
 					},{
 						Name: "mary shoot [@user]",
-						Value: "Shoot the mentioned user with the bow. Consumes one bow item.",
+						Value: "Shoot the mentioned user with the gun. If user has no gun, it uses the bow. Consumes one gun/bow item.",
 					},{
 						Name: "mary kill [@user]",
 						Value: "Shoot the mentioned user with the gun. Consumes one gun item.",
@@ -1005,12 +1005,15 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 				session.ChannelMessageSend(message.ChannelID, "Please specify a valid target!")
 				break
 			}
-			// Make sure the user doesn't use the bow on themselves
+			// Make sure the user doesn't use the weapon on themselves
 			if pingedUserID == userID {
 				session.ChannelMessageSend(message.ChannelID, "You can't rob yourself!")
 				break
 			}
-			res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "bow", pingedUserID)
+			res := database.Use(MONGO_URI, guildID, guildName, userID, userName, "gun", pingedUserID)
+			if res == "You do not have that item in your inventory!" || res == "You do not have enough of that item in your inventory to use!" {
+				res = database.Use(MONGO_URI, guildID, guildName, userID, userName, "bow", pingedUserID)
+			}
 			session.ChannelMessageSend(message.ChannelID, res)
 		}
 
