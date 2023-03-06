@@ -780,6 +780,8 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 					session.ChannelMessageSend(message.ChannelID, "Incorrect! The correct answer is " + correctAnswer + ".")
 					// If the user gambled coins, take them away
 					if gambleAmount != 0 {
+						res := database.PayForCorrectAnswer(session, message, difficulty, MONGO_URI, guildID, guildName, userID, userName, -gambleAmount)
+						_ = res // Unused variable
 						session.ChannelMessageSend(message.ChannelID, "<@" + strconv.Itoa(userID) + ">, you lose. -" + command[2] + " coins.")
 				}
 			}

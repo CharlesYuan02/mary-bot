@@ -190,7 +190,7 @@ func PayForCorrectAnswer(session *discordgo.Session, message *discordgo.MessageC
 		case "hard":
 			amount = 200
 		}
-	} else {
+	} else if amount > 0 {
 		switch strings.ToLower(difficulty) {
 		case "easy":
 			amount *= 2
