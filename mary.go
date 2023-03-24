@@ -303,25 +303,25 @@ func createMessage(session *discordgo.Session, message *discordgo.MessageCreate)
 						URL: maryAvatar,
 					},
 					Fields: []*discordgo.MessageEmbedField{{
-						Name: "mary use [item name] [@user]",
+						Name: "mary use [item name] @user",
 						Value: "Uses the specified item on the mentioned user. You can only use one item at a time.",
 					},{
 						Name: "mary eat [item name]",
 						Value: "You eat a chocolate. Who knows, maybe you'll get lucky?",
 					},{
-						Name: "mary runover [@user]",
+						Name: "mary runover @user",
 						Value: "Run over the mentioned user. Does not use up car item.",
 					},{
-						Name: "mary shoot [@user]",
+						Name: "mary shoot @user",
 						Value: "Shoot the mentioned user with the gun. If user has no gun, it uses the bow. Consumes one gun/bow item.",
 					},{
-						Name: "mary kill [@user]",
+						Name: "mary kill @user",
 						Value: "Shoot the mentioned user with the gun. Consumes one gun item.",
 					},{
-						Name: "mary marry [@user]",
+						Name: "mary marry @user",
 						Value: "Give the mentioned user a ring. If they give you one back, congratulations! You're married!",
 					},{
-						Name: "mary divorce [@user]",
+						Name: "mary divorce @user",
 						Value: "Divorce the mentioned user. You must be married to them or have proposed to them. Gives you back one ring.",
 					},
 				},
