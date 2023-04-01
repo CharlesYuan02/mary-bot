@@ -87,7 +87,7 @@ The <a href="https://github.com/mongodb/mongo-go-driver">MongoDB Go Driver</a> a
 <a href="https://cloud.google.com/">Google Cloud</a>'s Compute Engine provides me with a virtual machine instance that I can ssh into, download my dependencies, and host Mary from. I then used <a href="https://en.wikipedia.org/wiki/Tmux">tmux</a> to run the code in the background, so that when I close the secure shell window, Mary keeps running.
 
 ## Update March 4, 2023
-My GCP trial ran out, so I've switched to using <a href="https://railway.app/">Railway</a>. I've also been working for the past two weeks on more economy functions. This includes trivia, inventory, shop, give (an item, not coins), buy, sell, and five different use commands. The help, trivia, inventory, shop, and profile commands are all sent as rich embeds now, too! Feel free to try them out.
+My GCP trial ran out, so I've switched to using <a href="https://fly.io/">Fly.io/</a>. I've also been working for the past two weeks on more economy functions. This includes trivia, inventory, shop, give (an item, not coins), buy, sell, and five different use commands. The help, trivia, inventory, shop, and profile commands are all sent as rich embeds now, too! Feel free to try them out.
 
 ## Demo
 <img src="https://github.com/Chubbyman2/mary-bot/blob/main/docs/demo-2.PNG">
